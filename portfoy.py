@@ -13,6 +13,8 @@ import sys
 import json
 import ssl
 import sqlite3
+import shutil
+import base64
 import urllib.request
 import urllib.parse
 from concurrent.futures import ThreadPoolExecutor
@@ -819,6 +821,100 @@ def send_bekaprsi_email(df_live: pd.DataFrame, pool_usd: float, email_addr: str,
         return False, f"❌ E-posta gönderim hatası: {e}"
 
 
+
+import base64
+
+
+
+import base64
+
+
+def get_saved_github_token(db_path: str = DB_FILE) -> str:
+    try:
+        conn = sqlite3.connect(db_path)
+        cur = conn.cursor()
+        cur.execute("SELECT value FROM settings WHERE key='GITHUB_TOKEN'")
+        r = cur.fetchone()
+        conn.close()
+        if r and r[0]:
+            return str(r[0]).strip()
+    except Exception:
+        pass
+    return os.environ.get("GITHUB_TOKEN", "")
+
+
+def _push_file_to_github(local_path: str, remote_name: str, token: str, repo_full: str = "mrkzmz/portfoy-724") -> tuple:
+    with open(local_path, "rb") as f:
+        raw_bytes = f.read()
+    b64_content = base64.b64encode(raw_bytes).decode("ascii")
+    api_url = f"https://api.github.com/repos/{repo_full}/contents/{remote_name}"
+    ctx = ssl._create_unverified_context()
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github+json",
+        "User-Agent": "PortfoyKomutaMerkezi/1.0",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+    sha_val = None
+    try:
+        req_get = urllib.request.Request(api_url + "?ref=main", headers=headers, method="GET")
+        with urllib.request.urlopen(req_get, context=ctx, timeout=10) as resp:
+            data_get = json.loads(resp.read().decode("utf-8"))
+            sha_val = data_get.get("sha")
+    except Exception:
+        sha_val = None
+
+    payload = {
+        "message": f"🔄 Otomatik Bulut Eşitleme ({remote_name})",
+        "content": b64_content,
+        "branch": "main",
+    }
+    if sha_val:
+        payload["sha"] = sha_val
+
+    body_bytes = json.dumps(payload).encode("utf-8")
+    headers_put = dict(headers)
+    headers_put["Content-Type"] = "application/json"
+    req_put = urllib.request.Request(api_url, data=body_bytes, headers=headers_put, method="PUT")
+    with urllib.request.urlopen(req_put, context=ctx, timeout=15) as resp_put:
+        return resp_put.status in (200, 201), resp_put.status
+
+
+def sync_to_github_cloud(gh_token: str = "", repo_full: str = "mrkzmz/portfoy-724", db_path: str = DB_FILE) -> tuple:
+    import shutil
+    import base64
+    token = (gh_token or get_saved_github_token(db_path)).strip()
+    if not token:
+        return False, "⚠️ Sol menünün en üstündeki kutuya GitHub Token (ghp_...) kodunuzu 1 kez yapıştırıp butona basın."
+
+    try:
+        clean_db_path = os.path.join(BASE_DIR, "_cloud_sync_temp.db")
+        shutil.copy2(db_path, clean_db_path)
+        conn_c = sqlite3.connect(clean_db_path)
+        conn_c.execute("DELETE FROM settings WHERE key IN ('SMTP_APP_PASSWORD', 'GITHUB_TOKEN')")
+        conn_c.commit()
+        conn_c.execute("VACUUM")
+        conn_c.close()
+
+        ok_db, st_db = _push_file_to_github(clean_db_path, "portfoy_hafiza.db", token, repo_full)
+        try:
+            os.remove(clean_db_path)
+        except Exception:
+            pass
+
+        py_path = os.path.join(BASE_DIR, "portfoy.py")
+        if os.path.exists(py_path):
+            _push_file_to_github(py_path, "portfoy.py", token, repo_full)
+
+        if ok_db:
+            return True, f"☁️ GitHub ({repo_full}) ve Cep Telefonu (Streamlit Cloud) hafızası başarıyla eşitlendi!"
+        return False, f"⚠️ GitHub API yanıt kodu: {st_db}"
+    except urllib.error.HTTPError as he:
+        return False, f"❌ GitHub Eşitleme Hatası ({he.code}): Token yetkisini (repo) kontrol edin."
+    except Exception as e:
+        return False, f"❌ Bulut eşitleme hatası: {e}"
+
+
 def inject_clean_css():
     css = """
     <style>
@@ -1090,6 +1186,22 @@ def main():
             st.rerun()
 
         st.divider()
+        st.markdown("#### ☁️ GitHub Bulut & Telefon Eşitleme")
+        saved_gh_tok = get_saved_github_token()
+        in_gh_tok = st.text_input("GitHub Token (ghp_... — 1 Kez Girilir):", value=saved_gh_tok, type="password", placeholder="ghp_xxxxxxxxxxxxxxxxxxxx")
+        if st.button("☁️ Bulutu & Telefonu Şimdi Eşitle (GitHub)", use_container_width=True, type="primary"):
+            if in_gh_tok.strip():
+                conn = sqlite3.connect(DB_FILE)
+                conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('GITHUB_TOKEN', ?)", (in_gh_tok.strip(),))
+                conn.commit()
+                conn.close()
+            ok_c, msg_c = sync_to_github_cloud(in_gh_tok.strip())
+            if ok_c:
+                st.success(msg_c)
+            else:
+                st.error(msg_c)
+
+        st.divider()
         st.markdown("#### 📝 Alış / Satış İşlem Ekranı")
         t_list = df_live["ticker"].tolist()
         sel_tck = st.selectbox("Varlık Seç:", t_list, index=t_list.index("GOOGL") if "GOOGL" in t_list else 0)
@@ -1105,8 +1217,9 @@ def main():
         st.caption(f"📌 Hesaplanan Miktar: **{calc_lots:g} Adet / Lot**")
         if st.button("☑️ İşlemi Kaydet & Havuzu Güncelle", use_container_width=True):
             res_msg = record_trade_db(sel_tck, sel_act, sel_prc, sel_amt)
+            ok_gh, msg_gh = sync_to_github_cloud()
             st.cache_data.clear()
-            st.success(res_msg)
+            st.success(res_msg + (" | " + msg_gh if ok_gh else ""))
             st.rerun()
 
         st.divider()
@@ -1119,8 +1232,9 @@ def main():
             conn.execute("UPDATE portfolio SET hedef_tutar=? WHERE ticker=?", (round(new_hdf_val, 2), hdf_tck))
             conn.commit()
             conn.close()
+            ok_gh, msg_gh = sync_to_github_cloud()
             st.cache_data.clear()
-            st.success(f"✅ {hdf_tck} hedef kasası {new_hdf_val:,.0f} olarak güncellendi!")
+            st.success(f"✅ {hdf_tck} hedef kasası {new_hdf_val:,.0f} yapıldı!" + (" | " + msg_gh if ok_gh else ""))
             st.rerun()
 
         st.divider()
@@ -1151,7 +1265,8 @@ def main():
             conn.commit()
             conn.close()
             st.cache_data.clear()
-            st.success(f"✅ Mod 3: Nakit {new_pool_val:,.2f}$ yapıldı! Tüm hedef kasalar ve alış miktarları otomatik ölçeklendi!")
+            ok_gh, msg_gh = sync_to_github_cloud()
+            st.success(f"✅ Mod 3: Nakit {new_pool_val:,.2f}$ yapıldı!" + (" | " + msg_gh if ok_gh else ""))
             st.rerun()
 
         st.divider()
