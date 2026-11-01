@@ -1,12 +1,32 @@
 # -*- coding: utf-8 -*-
 import os
+import sys
 import pandas as pd
+from datetime import datetime
+from zoneinfo import ZoneInfo
 from concurrent.futures import ThreadPoolExecutor
 
 os.environ["STREAMLIT_RUN_CONTEXT"] = "TEST"
 import portfoy as pf
 
+def should_dispatch_now() -> tuple:
+    is_scheduled = (os.environ.get("GITHUB_EVENT_NAME") == "schedule") or ("--scheduled" in sys.argv)
+    if not is_scheduled:
+        return True, "Manuel tetikleme -> Anında gönderiliyor."
+    tr_now = datetime.now(ZoneInfo("Europe/Istanbul"))
+    ny_now = datetime.now(ZoneInfo("America/New_York"))
+    if tr_now.hour in (22, 23):
+        if ny_now.hour == 15:
+            return True, f"✅ ABD Kapanış Onay Saati Eşleşti ({ny_now.strftime('%H:%M %Z')} = {tr_now.strftime('%H:%M TSİ')}) -> Gönderiliyor."
+        target_tsi = "23:35 TSİ" if ny_now.tzname() == "EST" else "22:35 TSİ"
+        return False, f"⏳ Otomatik Yaz/Kış Saati Koruması: Şu an NY saati {ny_now.strftime('%H:%M %Z')}. ABD kapanış bülteni 15:35 NY ({target_tsi}) saatinde gönderilecek."
+    return True, f"✅ Sabit Türkiye Seansı ({tr_now.strftime('%H:%M TSİ')}) -> Gönderiliyor."
+
 def run_cloud_newsletter():
+    ok_time, time_msg = should_dispatch_now()
+    print(time_msg)
+    if not ok_time:
+        return
     df_db, pool_usd = pf.load_portfolio_db()
     yf_tickers = df_db["yf_ticker"].tolist()
     series_map = {}
