@@ -1,0 +1,22 @@
+name: BEKAPRSI 7/24 Otomatik Sinyal Bulteni
+
+on:
+  schedule:
+    - cron: '45 6 * * *'     # 09:45 TSI (Sabah Bulteni)
+    - cron: '40 14 * * 1-5'  # 17:40 TSI (BIST Kapanis Onayi)
+    - cron: '35 19 * * 1-5'  # 22:35 TSI (ABD Kapanis Onayi)
+  workflow_dispatch:
+
+jobs:
+  send_newsletter:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r requirements.txt
+      - run: python mail_gonder.py
+        env:
+          SMTP_EMAIL: ${{ secrets.SMTP_EMAIL }}
+          SMTP_APP_PASSWORD: ${{ secrets.SMTP_APP_PASSWORD }}
