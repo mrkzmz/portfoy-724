@@ -902,9 +902,18 @@ def sync_to_github_cloud(gh_token: str = "", repo_full: str = "mrkzmz/portfoy-72
         except Exception:
             pass
 
-        py_path = os.path.join(BASE_DIR, "portfoy.py")
-        if os.path.exists(py_path):
-            _push_file_to_github(py_path, "portfoy.py", token, repo_full)
+        for fname, rname in [
+            ("portfoy.py", "portfoy.py"),
+            ("mail_gonder.py", "mail_gonder.py"),
+            ("main.yml", ".github/workflows/main.yml"),
+            ("main.yml", ".github/workflows/otomatik_bulten.yml"),
+        ]:
+            fpath = os.path.join(BASE_DIR, fname)
+            if os.path.exists(fpath):
+                try:
+                    _push_file_to_github(fpath, rname, token, repo_full)
+                except Exception:
+                    pass
 
         if ok_db:
             return True, f"☁️ GitHub ({repo_full}) ve Cep Telefonu (Streamlit Cloud) hafızası başarıyla eşitlendi!"
@@ -914,6 +923,28 @@ def sync_to_github_cloud(gh_token: str = "", repo_full: str = "mrkzmz/portfoy-72
     except Exception as e:
         return False, f"❌ Bulut eşitleme hatası: {e}"
 
+
+from datetime import datetime, timezone, timedelta
+from zoneinfo import ZoneInfo
+
+
+def get_us_market_schedule_tsi() -> dict:
+    ny_now = datetime.now(ZoneInfo('America/New_York'))
+    is_dst = bool(ny_now.dst())
+    tz_label = 'EDT — Yaz Saati (UTC-4)' if is_dst else 'EST — Kış Saati (UTC-5)'
+    open_tsi = '16:30' if is_dst else '17:30'
+    close_tsi = '23:00' if is_dst else '00:00'
+    onay_window_tsi = '22:35 – 22:55 TSİ' if is_dst else '23:35 – 23:55 TSİ'
+    mail_tsi = '22:35 TSİ' if is_dst else '23:35 TSİ'
+    return {
+        'is_dst': is_dst,
+        'tz_label': tz_label,
+        'open_tsi': open_tsi,
+        'close_tsi': close_tsi,
+        'onay_window_tsi': onay_window_tsi,
+        'mail_tsi': mail_tsi,
+        'ny_time_str': ny_now.strftime('%H:%M %Z'),
+    }
 
 def inject_clean_css():
     css = """
@@ -1181,6 +1212,8 @@ def main():
 
     with st.sidebar:
         st.markdown("### 💼 BEKAPRSI SİNYAL MERKEZİ")
+        _us_sch = get_us_market_schedule_tsi()
+        st.caption(f"🕒 **Otomatik Seans Takvimi:**\n• **🇹🇷 BIST:** `10:00–18:00` *(Onay: `17:40 TSİ`)*\n• **🇺🇸 ABD ({_us_sch['tz_label'].split(' ')[0]}):** `{_us_sch['open_tsi']}–{_us_sch['close_tsi']}` *(Onay: `{_us_sch['mail_tsi']}`)*")
         if st.button("🔄 Canlı Verileri Şimdi Yenile", use_container_width=True, type="primary"):
             st.cache_data.clear()
             st.rerun()
