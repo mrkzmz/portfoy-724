@@ -721,7 +721,6 @@ def detect_existing_smtp_creds(db_path: str = DB_FILE) -> tuple:
 
 
 def build_bekaprsi_html_email(df_live: pd.DataFrame, pool_usd: float) -> tuple:
-    df_live = enrich_df_with_earnings(df_live)
     tsi_now = datetime.now(timezone(timedelta(hours=3)))
     saat_tsi = tsi_now.hour
     tarih_str = tsi_now.strftime("%d.%m.%Y %H:%M TSİ")
@@ -752,43 +751,6 @@ def build_bekaprsi_html_email(df_live: pd.DataFrame, pool_usd: float) -> tuple:
         (df_bist_all["canli_rsi_1g"] <= 43.0) | (df_bist_all["dunku_rsi_1g"] < 40.0) | (df_bist_all["canli_rsi_1h"] < 40.0)
     ].sort_values("canli_rsi_1g")
 
-    df_earn_14 = df_live[(df_live["bilanco_kalan_gun"] >= 0) & (df_live["bilanco_kalan_gun"] <= 14)].sort_values("bilanco_kalan_gun")
-    if hide_bist:
-        df_earn_14 = df_earn_14[~df_earn_14["ticker"].str.startswith("IST:")]
-
-    earn_banner_html = ""
-    if not df_earn_14.empty:
-        e_trs = ""
-        for _, er in df_earn_14.iterrows():
-            rol_str = "💼 Elimde Kale" if float(er["eldeki_adet"]) > 0 else "🎯 Hedef Radar"
-            sev = str(er.get("bilanco_seviye", ""))
-            bg_badge = "#fee2e2" if sev == "KRITIK" else "#fef3c7"
-            fg_badge = "#991b1b" if sev == "KRITIK" else "#92400e"
-            kural_txt = "🚨 GAP KALKANI AKTİF: Bilanço öncesi alım yapma, ertesi gün kapanışı bekle!" if sev == "KRITIK" else "⚠️ Yaklaşan bilanço haftası; kademe ve gap riskini izle."
-            e_trs += (
-                f"<tr style='border-bottom:1px solid #fecaca; background:{bg_badge}; color:{fg_badge};'>"
-                f"<td style='padding:7px; font-weight:800;'>{er['sembol']} ({rol_str})</td>"
-                f"<td style='padding:7px; font-weight:800;'>{er['bilanco_etiket']}</td>"
-                f"<td style='padding:7px;'>1G RSI: <b>{er['canli_rsi_1g']:.1f}</b> | 1H: <b>{er['canli_rsi_1h']:.1f}</b></td>"
-                f"<td style='padding:7px; font-weight:700;'>{kural_txt}</td>"
-                f"</tr>"
-            )
-        earn_banner_html = (
-            f"<div style='background:#991b1b; color:#ffffff; padding:9px 14px; border-radius:7px; font-weight:800; font-size:14px; margin-top:14px;'>"
-            f"📅 YAKLAŞAN BİLANÇO UYARISI &amp; GAP KALKANI — Önümüzdeki 14 Gün ({len(df_earn_14)} Şirket)</div>"
-            f"<table style='width:100%; border-collapse:collapse; font-size:12.5px; background:#ffffff; border:1px solid #fca5a5; margin-top:6px;'>"
-            f"<thead><tr style='background:#fef2f2; text-align:left; color:#7f1d1d;'>"
-            f"<th style='padding:7px;'>Şirket &amp; Konum</th><th style='padding:7px;'>Bilanço Tarihi &amp; Kalan Gün</th>"
-            f"<th style='padding:7px;'>Canlı RSI</th><th style='padding:7px;'>BEKAPRSI Bilanço Kalkanı Hükmü</th>"
-            f"</tr></thead><tbody>{e_trs}</tbody></table>"
-        )
-    else:
-        earn_banner_html = (
-            "<div style='background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; padding:8px 12px; border-radius:7px; font-size:12.5px; margin-top:12px;'>"
-            "📅 <b>Bilanço Kalkanı Denetimi:</b> Önümüzdeki 14 gün içinde aktif sinyal varlıklarında kritik bilanço (0-3 gün) engeli görünmüyor."
-            "</div>"
-        )
-
     def _rows_to_table(df_sec: pd.DataFrame, title_bg: str, title_txt: str) -> str:
         if df_sec.empty:
             return f"<p style='font-size:13px; color:#64748b;'><b>{title_txt}:</b> Şu an aktif sinyal yok.</p>"
@@ -798,9 +760,6 @@ def build_bekaprsi_html_email(df_live: pd.DataFrame, pool_usd: float) -> tuple:
             cs = "₺" if is_b else "$"
             chg = float(r["degisim_pct"])
             c_col = "#15803d" if chg >= 0 else "#b91c1c"
-            b_etk = str(r.get("bilanco_etiket", "-"))
-            b_sev = str(r.get("bilanco_seviye", ""))
-            b_style = "color:#b91c1c; font-weight:800;" if b_sev == "KRITIK" else ("color:#b45309; font-weight:700;" if b_sev == "UYARI" else "color:#475569;")
             trs += (
                 f"<tr style='border-bottom:1px solid #e2e8f0;'>"
                 f"<td style='padding:8px; font-weight:800;'>{r['sembol']}</td>"
@@ -808,7 +767,6 @@ def build_bekaprsi_html_email(df_live: pd.DataFrame, pool_usd: float) -> tuple:
                 f"<td style='padding:8px;'><b>{r['canli_rsi_1g']:.1f}</b> (Dün: {r['dunku_rsi_1g']:.1f})</td>"
                 f"<td style='padding:8px;'><b>{r['canli_rsi_1h']:.1f}</b></td>"
                 f"<td style='padding:8px;'>{r['korunan_ana_para']:,.0f}{cs} / {r['hedef_tutar']:,.0f}{cs}</td>"
-                f"<td style='padding:8px; {b_style}'>{b_etk}</td>"
                 f"<td style='padding:8px; font-weight:800; color:#0f172a;'>{r['karar']}</td>"
                 f"</tr>"
             )
@@ -818,8 +776,7 @@ def build_bekaprsi_html_email(df_live: pd.DataFrame, pool_usd: float) -> tuple:
             f"<thead><tr style='background:#f1f5f9; text-align:left;'>"
             f"<th style='padding:8px;'>Varlık</th><th style='padding:8px;'>Fiyat &amp; Günlük</th>"
             f"<th style='padding:8px;'>1G RSI</th><th style='padding:8px;'>1H RSI</th>"
-            f"<th style='padding:8px;'>Kasa / Hedef</th><th style='padding:8px;'>📅 Bilanço Uyarısı</th>"
-            f"<th style='padding:8px;'>Otomatik Al / Sat Kararı &amp; Tetik</th>"
+            f"<th style='padding:8px;'>Kasa / Hedef</th><th style='padding:8px;'>Otomatik Al / Sat Kararı &amp; Tetik</th>"
             f"</tr></thead><tbody>{trs}</tbody></table>"
         )
 
@@ -829,21 +786,18 @@ def build_bekaprsi_html_email(df_live: pd.DataFrame, pool_usd: float) -> tuple:
 
     html_body = (
         "<html><body style='font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif; background:#f8fafc; padding:18px; color:#0f172a;'>"
-        "<div style='max-width:940px; margin:0 auto; background:#ffffff; border:1px solid #cbd5e1; border-radius:12px; padding:20px;'>"
-        f"<h2 style='margin-top:0; color:#0f172a;'>💼 PORTFÖY — BEKAPRSI Canlı Sinyal &amp; Bilanço Kalkanı Bülteni ({tarih_str})</h2>"
+        "<div style='max-width:880px; margin:0 auto; background:#ffffff; border:1px solid #cbd5e1; border-radius:12px; padding:20px;'>"
+        f"<h2 style='margin-top:0; color:#0f172a;'>💼 PORTFÖY — BEKAPRSI Canlı Sinyal Bülteni ({tarih_str})</h2>"
         f"<p style='font-size:13.5px; color:#334155;'><b>Canlı Portföy Değeri (24 Kale):</b> {tot_port_val:,.2f}$ ({tot_port_pl:+,.2f}$ / {tot_port_pl_pct:+.2f}%) &nbsp;|&nbsp; "
         f"<b>Kullanılabilir Nakit Havuzu (Mod 3):</b> {pool_usd:,.2f}$ ({int(pool_usd//250)}x Kurşun)</p>"
-        + earn_banner_html
         + _rows_to_table(df_elimde_al, "#065f46", "🟢 1A. ELİMDE OLAN VARLIKLAR — AL / EKLE & DİP ADAYLARI")
         + _rows_to_table(df_elimde_sat, "#b45309", "🔴 1B. ELİMDE OLAN VARLIKLAR — SAT / KÂR HASADI BÖLGESİ (RSI >= 64)")
         + _rows_to_table(df_us_dip, "#0f172a", "🎯 2. BÖLÜM: HEDEFLEDİĞİMİZ ABD, ÜLKE ETF & 7/24 KRİPTO DİP FIRSATLARI")
         + bist_section_html
-        + "<p style='font-size:11.5px; color:#64748b; margin-top:18px;'>* Bu bülten doğrudan PORTFÖY (portfoy.py) motorundan üretilmiştir; web sitesindeki sinyaller ve 📅 Bilanço Kalkanı ile %100 birebir aynıdır.</p>"
+        + "<p style='font-size:11.5px; color:#64748b; margin-top:18px;'>* Bu bülten doğrudan PORTFÖY (portfoy.py) motorundan üretilmiştir; web sitesindeki sinyallerle %100 birebir aynıdır.</p>"
         "</div></body></html>"
     )
-    kritik_cnt = int((df_earn_14["bilanco_seviye"] == "KRITIK").sum()) if not df_earn_14.empty else 0
-    earn_subj_tag = f" | 🚨 {kritik_cnt} Kritik Bilanço!" if kritik_cnt > 0 else (f" | 📅 {len(df_earn_14)} Yaklaşan Bilanço" if not df_earn_14.empty else "")
-    subj = f"💼 BEKAPRSI Sinyal Bülteni ({tarih_str}) — {len(df_elimde_al)} Elimde Al | {len(df_elimde_sat)} Sat | {len(df_us_dip)} Hedef Dip{earn_subj_tag}"
+    subj = f"💼 BEKAPRSI Sinyal Bülteni ({tarih_str}) — {len(df_elimde_al)} Elimde Al | {len(df_elimde_sat)} Sat | {len(df_us_dip)} Hedef Dip"
     return subj, html_body
 
 
@@ -991,338 +945,6 @@ def get_us_market_schedule_tsi() -> dict:
         'mail_tsi': mail_tsi,
         'ny_time_str': ny_now.strftime('%H:%M %Z'),
     }
-
-# === BEKAPRSI BILANCO UYARISI BASLANGIC ===
-from datetime import date as _date_cls
-import urllib.parse
-import http.cookiejar
-
-ETF_AND_EXEMPT_TICKERS = {
-    "NASA", "SMH", "QQQM", "EWQ", "EWS", "EWY", "EWT", "ROBO", "REMX",
-    "IST:ZPX30", "ZPX30.IS",
-    "CURRENCY:BTCUSD", "CURRENCY:ETHUSD", "CURRENCY:SOLUSD", "CURRENCY:XRPUSD",
-    "BTC-USD", "ETH-USD", "SOL-USD", "XRP-USD",
-}
-
-
-def is_earnings_exempt_asset(ticker: str, yf_ticker: str = "", kategori: str = "") -> bool:
-    t = str(ticker).upper().strip()
-    yt = str(yf_ticker).upper().strip()
-    kat = str(kategori).upper().strip()
-    if t in ETF_AND_EXEMPT_TICKERS or yt in ETF_AND_EXEMPT_TICKERS:
-        return True
-    if t.startswith("CURRENCY:") or t.startswith("INDEX") or yt.endswith("-USD"):
-        return True
-    if "ETF" in kat or "KRİPTO" in kat or "KRIPTO" in kat:
-        return True
-    return False
-
-
-def ensure_earnings_table(db_path: str = DB_FILE):
-    try:
-        conn = sqlite3.connect(db_path)
-        conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS earnings_cache (
-                ticker TEXT PRIMARY KEY,
-                yf_ticker TEXT,
-                next_date TEXT,
-                session_tag TEXT,
-                source TEXT,
-                updated_at TEXT
-            )
-            """
-        )
-        conn.commit()
-        conn.close()
-    except Exception:
-        pass
-
-
-def save_manual_earnings_date(ticker: str, yf_ticker: str, next_date_str: str, session_tag: str = "AMC", db_path: str = DB_FILE):
-    ensure_earnings_table(db_path)
-    now_iso = datetime.now(timezone(timedelta(hours=3))).strftime("%Y-%m-%d %H:%M:%S")
-    conn = sqlite3.connect(db_path)
-    conn.execute(
-        "INSERT OR REPLACE INTO earnings_cache (ticker, yf_ticker, next_date, session_tag, source, updated_at) VALUES (?, ?, ?, ?, 'MANUAL', ?)",
-        (ticker.strip(), yf_ticker.strip(), next_date_str.strip(), session_tag.strip(), now_iso),
-    )
-    conn.commit()
-    conn.close()
-
-
-def fetch_single_ticker_earnings(yf_sym: str) -> tuple:
-    today_d = datetime.now(timezone(timedelta(hours=3))).date()
-    if yf is not None:
-        try:
-            tk = yf.Ticker(yf_sym)
-            cal = tk.calendar
-            cand_dates = []
-            if isinstance(cal, dict):
-                ed = cal.get("Earnings Date") or cal.get("Earnings High") or []
-                if not isinstance(ed, (list, tuple)):
-                    ed = [ed]
-                cand_dates = list(ed)
-            elif hasattr(cal, "index") and "Earnings Date" in cal.index:
-                val = cal.loc["Earnings Date"]
-                cand_dates = list(val.values) if hasattr(val, "values") else [val]
-            elif hasattr(cal, "columns") and "Earnings Date" in cal.columns:
-                cand_dates = list(cal["Earnings Date"].values)
-
-            parsed_dates = []
-            for cd in cand_dates:
-                if cd is None:
-                    continue
-                if hasattr(cd, "date"):
-                    d_obj = cd.date()
-                elif isinstance(cd, _date_cls):
-                    d_obj = cd
-                else:
-                    try:
-                        d_obj = datetime.strptime(str(cd)[:10], "%Y-%m-%d").date()
-                    except Exception:
-                        continue
-                parsed_dates.append(d_obj)
-
-            if parsed_dates:
-                future_d = [d for d in parsed_dates if d >= today_d - timedelta(days=1)]
-                chosen_d = min(future_d) if future_d else max(parsed_dates)
-                return chosen_d.strftime("%Y-%m-%d"), "-"
-        except Exception:
-            pass
-
-    try:
-        cj = http.cookiejar.CookieJar()
-        ctx = ssl._create_unverified_context()
-        opener = urllib.request.build_opener(
-            urllib.request.HTTPCookieProcessor(cj),
-            urllib.request.HTTPSHandler(context=ctx),
-        )
-        opener.addheaders = [("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)")]
-        try:
-            opener.open("https://fc.yahoo.com", timeout=3)
-        except Exception:
-            pass
-        crumb = opener.open("https://query1.finance.yahoo.com/v1/test/getcrumb", timeout=3).read().decode("utf-8").strip()
-        if crumb and len(crumb) < 30:
-            q_url = f"https://query2.finance.yahoo.com/v10/finance/quoteSummary/{urllib.parse.quote(yf_sym)}?modules=calendarEvents&crumb={urllib.parse.quote(crumb)}"
-            raw_j = json.loads(opener.open(q_url, timeout=4).read().decode("utf-8"))
-            res_list = raw_j.get("quoteSummary", {}).get("result") or []
-            if res_list:
-                earn_obj = res_list[0].get("calendarEvents", {}).get("earnings", {})
-                ed_list = earn_obj.get("earningsDate") or []
-                if ed_list and "raw" in ed_list[0]:
-                    ts = int(ed_list[0]["raw"])
-                    dt_utc = datetime.fromtimestamp(ts, tz=timezone.utc)
-                    s_tag = "BMO" if dt_utc.hour < 14 else ("AMC" if dt_utc.hour >= 20 else "-")
-                    return dt_utc.strftime("%Y-%m-%d"), s_tag
-    except Exception:
-        pass
-
-    return "", "-"
-
-
-def format_earnings_shield_status(next_date_str: str, session_tag: str = "-", is_exempt: bool = False) -> dict:
-    if is_exempt:
-        return {
-            "bilanco_tarihi": "Muaf (ETF/Kripto)",
-            "bilanco_kalan_gun": 999,
-            "bilanco_seans": "-",
-            "bilanco_seviye": "MUAF",
-            "bilanco_etiket": "🛡️ Muaf (ETF/Kripto)",
-            "bilanco_kalkan_notu": "",
-        }
-    if not next_date_str or next_date_str in ("-", "Belirsiz", ""):
-        return {
-            "bilanco_tarihi": "-",
-            "bilanco_kalan_gun": 999,
-            "bilanco_seans": "-",
-            "bilanco_seviye": "YOK",
-            "bilanco_etiket": "📅 Takvim Bekleniyor",
-            "bilanco_kalkan_notu": "",
-        }
-    try:
-        dt_earn = datetime.strptime(next_date_str[:10], "%Y-%m-%d").date()
-    except Exception:
-        return {
-            "bilanco_tarihi": "-",
-            "bilanco_kalan_gun": 999,
-            "bilanco_seans": "-",
-            "bilanco_seviye": "YOK",
-            "bilanco_etiket": "📅 Takvim Bekleniyor",
-            "bilanco_kalkan_notu": "",
-        }
-
-    today_tsi = datetime.now(timezone(timedelta(hours=3))).date()
-    days_left = (dt_earn - today_tsi).days
-    tr_fmt = dt_earn.strftime("%d.%m.%Y")
-    s_lbl = "Seans Öncesi" if session_tag == "BMO" else ("Kapanış Sonrası" if session_tag == "AMC" else "")
-    s_part = f" • {s_lbl}" if s_lbl else ""
-
-    if days_left < 0:
-        return {
-            "bilanco_tarihi": tr_fmt,
-            "bilanco_kalan_gun": days_left,
-            "bilanco_seans": session_tag,
-            "bilanco_seviye": "GECTI",
-            "bilanco_etiket": f"✅ Açıklandı ({tr_fmt})",
-            "bilanco_kalkan_notu": "",
-        }
-    elif days_left == 0:
-        return {
-            "bilanco_tarihi": tr_fmt,
-            "bilanco_kalan_gun": 0,
-            "bilanco_seans": session_tag,
-            "bilanco_seviye": "KRITIK",
-            "bilanco_etiket": f"🚨 BUGÜN BİLANÇO! ({tr_fmt}{s_part})",
-            "bilanco_kalkan_notu": f" 🚨 [BİLANÇO KALKANI: BUGÜN ({tr_fmt}{s_part}) — Gap Riski! Yarın Kapanışı Bekle]",
-        }
-    elif days_left <= 3:
-        return {
-            "bilanco_tarihi": tr_fmt,
-            "bilanco_kalan_gun": days_left,
-            "bilanco_seans": session_tag,
-            "bilanco_seviye": "KRITIK",
-            "bilanco_etiket": f"🚨 {days_left} GÜN KALDI ({tr_fmt}{s_part})",
-            "bilanco_kalkan_notu": f" 🚨 [BİLANÇO KALKANI: {tr_fmt} ({days_left} Gün{s_part}) — Bilanço Sonrası Kapanışı Bekle]",
-        }
-    elif days_left <= 7:
-        return {
-            "bilanco_tarihi": tr_fmt,
-            "bilanco_kalan_gun": days_left,
-            "bilanco_seans": session_tag,
-            "bilanco_seviye": "UYARI",
-            "bilanco_etiket": f"⚠️ {days_left} Gün Sonra ({tr_fmt}{s_part})",
-            "bilanco_kalkan_notu": f" ⚠️ [Yaklaşan Bilanço: {tr_fmt} ({days_left} Gün)]",
-        }
-    elif days_left <= 14:
-        return {
-            "bilanco_tarihi": tr_fmt,
-            "bilanco_kalan_gun": days_left,
-            "bilanco_seans": session_tag,
-            "bilanco_seviye": "TAKVIM",
-            "bilanco_etiket": f"📅 {days_left} Gün ({tr_fmt})",
-            "bilanco_kalkan_notu": f" 📅 [Bilanço: {tr_fmt} ({days_left} Gün)]",
-        }
-    else:
-        return {
-            "bilanco_tarihi": tr_fmt,
-            "bilanco_kalan_gun": days_left,
-            "bilanco_seans": session_tag,
-            "bilanco_seviye": "GUVENLI",
-            "bilanco_etiket": f"📅 {tr_fmt} ({days_left}G)",
-            "bilanco_kalkan_notu": "",
-        }
-
-
-def enrich_df_with_earnings(df_live: pd.DataFrame, db_path: str = DB_FILE, force_refresh: bool = False) -> pd.DataFrame:
-    if df_live is None or df_live.empty:
-        return df_live
-    ensure_earnings_table(db_path)
-    now_tsi = datetime.now(timezone(timedelta(hours=3)))
-    cache_map = {}
-    try:
-        conn = sqlite3.connect(db_path)
-        cur = conn.cursor()
-        cur.execute("SELECT ticker, next_date, session_tag, source, updated_at FROM earnings_cache")
-        for t_k, n_d, s_t, src, u_at in cur.fetchall():
-            cache_map[str(t_k)] = (str(n_d or ""), str(s_t or "-"), str(src or "AUTO"), str(u_at or ""))
-        conn.close()
-    except Exception:
-        pass
-
-    to_fetch = []
-    for _, r in df_live.iterrows():
-        tck = str(r.get("ticker", ""))
-        yt = str(r.get("yf_ticker", tck))
-        kat = str(r.get("kategori", ""))
-        if is_earnings_exempt_asset(tck, yt, kat):
-            continue
-        if not force_refresh and tck in cache_map:
-            n_d, s_t, src, u_at = cache_map[tck]
-            if src == "MANUAL" and n_d:
-                continue
-            try:
-                dt_u = datetime.strptime(u_at[:19], "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone(timedelta(hours=3)))
-                if (now_tsi - dt_u).total_seconds() < 43200 and n_d:
-                    continue
-            except Exception:
-                pass
-        to_fetch.append((tck, yt))
-
-    if to_fetch:
-        def _earn_worker(item):
-            t_k, y_k = item
-            nd, stg = fetch_single_ticker_earnings(y_k)
-            return t_k, y_k, nd, stg
-
-        fetched_rows = []
-        try:
-            with ThreadPoolExecutor(max_workers=10) as ex:
-                for t_k, y_k, nd, stg in ex.map(_earn_worker, to_fetch):
-                    if nd:
-                        if t_k in cache_map and cache_map[t_k][2] == "MANUAL" and not force_refresh:
-                            continue
-                        cache_map[t_k] = (nd, stg, "AUTO", now_tsi.strftime("%Y-%m-%d %H:%M:%S"))
-                        fetched_rows.append((t_k, y_k, nd, stg, "AUTO", now_tsi.strftime("%Y-%m-%d %H:%M:%S")))
-        except Exception:
-            pass
-
-        if fetched_rows:
-            try:
-                conn = sqlite3.connect(db_path)
-                conn.executemany(
-                    "INSERT OR REPLACE INTO earnings_cache (ticker, yf_ticker, next_date, session_tag, source, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
-                    fetched_rows,
-                )
-                conn.commit()
-                conn.close()
-            except Exception:
-                pass
-
-    b_tarih_list, b_gun_list, b_seans_list, b_sev_list, b_etk_list, karar_new_list = [], [], [], [], [], []
-    for _, r in df_live.iterrows():
-        tck = str(r.get("ticker", ""))
-        yt = str(r.get("yf_ticker", tck))
-        kat = str(r.get("kategori", ""))
-        karar_str = str(r.get("karar", ""))
-        exempt = is_earnings_exempt_asset(tck, yt, kat)
-        n_d, s_t = ("", "-")
-        if not exempt and tck in cache_map:
-            n_d, s_t = cache_map[tck][0], cache_map[tck][1]
-        st_info = format_earnings_shield_status(n_d, s_t, is_exempt=exempt)
-        b_tarih_list.append(st_info["bilanco_tarihi"])
-        b_gun_list.append(st_info["bilanco_kalan_gun"])
-        b_seans_list.append(st_info["bilanco_seans"])
-        b_sev_list.append(st_info["bilanco_seviye"])
-        b_etk_list.append(st_info["bilanco_etiket"])
-        note = st_info["bilanco_kalkan_notu"]
-        if note and note.strip() not in karar_str:
-            karar_str = karar_str + note
-        karar_new_list.append(karar_str)
-
-    df_out = df_live.copy()
-    df_out["bilanco_tarihi"] = b_tarih_list
-    df_out["bilanco_kalan_gun"] = b_gun_list
-    df_out["bilanco_seans"] = b_seans_list
-    df_out["bilanco_seviye"] = b_sev_list
-    df_out["bilanco_etiket"] = b_etk_list
-    df_out["karar"] = karar_new_list
-    return df_out
-
-
-def render_earnings_dashboard_banner(df_live: pd.DataFrame):
-    if st is None or df_live is None or df_live.empty or "bilanco_kalan_gun" not in df_live.columns:
-        return
-    df_e14 = df_live[(df_live["bilanco_kalan_gun"] >= 0) & (df_live["bilanco_kalan_gun"] <= 14)].sort_values("bilanco_kalan_gun")
-    if not df_e14.empty:
-        krit_n = int((df_e14["bilanco_seviye"] == "KRITIK").sum())
-        hdr_icon = "🚨" if krit_n > 0 else "📅"
-        with st.expander(f"{hdr_icon} YAKLAŞAN BİLANÇO UYARISI & GAP KALKANI — Önümüzdeki 14 Gün ({len(df_e14)} Şirket | {krit_n} Kritik)", expanded=(krit_n > 0)):
-            disp_cols = [c for c in ["sembol", "kategori", "fiyat", "canli_rsi_1g", "canli_rsi_1h", "bilanco_etiket", "karar"] if c in df_e14.columns]
-            st.dataframe(df_e14[disp_cols], use_container_width=True, hide_index=True)
-# === BEKAPRSI BILANCO UYARISI BITIS ===
-
 
 def inject_clean_css():
     css = """
@@ -1583,7 +1205,7 @@ def main():
             row_d["lot_250_usd"] = round(250.0 / row_d["fiyat"], 4 if row_d["fiyat"] >= 100 else 2) if row_d["fiyat"] > 0 else 0.0
             row_d["karar"] = karar
             results.append(row_d)
-        return enrich_df_with_earnings(pd.DataFrame(results))
+        return pd.DataFrame(results)
 
     df_all = fetch_live_snapshot(df_db)
     df_live = df_all[~df_all["ticker"].str.startswith("INDEX")].copy()
@@ -1611,29 +1233,6 @@ def main():
                 st.success(msg_c)
             else:
                 st.error(msg_c)
-
-        st.divider()
-        with st.expander("📅 Bilanço Takvimi & Tarih Tanımla", expanded=False):
-            st.caption("Yahoo Finance bilanço takvimini tarar; kritik bilanço (0-3 gün) öncesi gap riskine karşı uyarır.")
-            if st.button("🔄 Yahoo Bilanço Takvimini Şimdi Tara", use_container_width=True):
-                enrich_df_with_earnings(df_db, force_refresh=True)
-                ok_gh, _ = sync_to_github_cloud()
-                st.cache_data.clear()
-                st.success("✅ Bilanço takvimi güncellendi!" + (" (Buluta eşitlendi)" if ok_gh else ""))
-                st.rerun()
-            eq_only = [t for t in df_db["ticker"].tolist() if not is_earnings_exempt_asset(t)]
-            e_tck = st.selectbox("Şirket Seç (ABD / BIST):", eq_only, key="earn_tck_sel")
-            e_dt = st.date_input("Sonraki Bilanço Tarihi:", key="earn_dt_in")
-            e_ses = st.selectbox("Açıklanma Zamanı:", ["AMC (Kapanış Sonrası — 00:00 TSİ)", "BMO (Açılış Öncesi — 17:30 TSİ)", "- (Seans Dışı)"], key="earn_ses_in")
-            if st.button("💾 Bilanço Tarihini Kaydet & Eşitle", use_container_width=True):
-                yf_row = df_db[df_db["ticker"] == e_tck]
-                yf_s = str(yf_row["yf_ticker"].iloc[0]) if not yf_row.empty else e_tck
-                s_code = e_ses.split(" ")[0]
-                save_manual_earnings_date(e_tck, yf_s, e_dt.strftime("%Y-%m-%d"), s_code)
-                ok_gh, _ = sync_to_github_cloud()
-                st.cache_data.clear()
-                st.success(f"✅ {e_tck} bilanço tarihi {e_dt.strftime('%d.%m.%Y')} ({s_code}) olarak kaydedildi!")
-                st.rerun()
 
         st.divider()
         st.markdown("#### 📝 Alış / Satış İşlem Ekranı")
