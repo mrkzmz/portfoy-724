@@ -1089,6 +1089,7 @@ def evaluate_portfolio_decision(row: dict) -> tuple:
     tck = str(row.get("ticker", ""))
     fiyat = float(row.get("fiyat", 0.0))
     chg = float(row.get("degisim_pct", 0.0))
+    dd52 = float(row.get("dd52_pct", 0.0))
     cs = "₺" if tck.startswith("IST:") else "$"
 
     if str(karar).startswith("🟢") and chg < 0.40 and fiyat > 0:
@@ -1096,8 +1097,15 @@ def evaluate_portfolio_decision(row: dict) -> tuple:
         tetik_f = round(prev_close * 1.004, 2)
         lot_str = f"{lot_v:.4f}" if tck.startswith("CURRENCY:") else (f"{int(round(lot_v))}" if tck.startswith("IST:") else f"{lot_v:.2f}")
         rsi_1h = float(row.get("canli_rsi_1h", 50.0))
-        kale_lbl = "1H ANA KALE DİPTE" if rsi_1h < 40.0 else "1G ÖNCÜ DİPTE"
+        kale_lbl = "2. FREN (<-%35) DİPTE" if dd52 <= -35.0 else ("1H ANA KALE DİPTE" if rsi_1h < 40.0 else "1G ÖNCÜ DİPTE")
         karar = f"🔻 {kale_lbl} ({chg:+.2f}% < +0.40% Eşik) -> Yeşil Onay Tetik: >={tetik_f:,.2f}{cs} (+{kad_u:,.0f}{cs} = {lot_str} Adet)"
+
+    if dd52 <= -35.0:
+        fren = "2. FREN (<-%35)"
+        if "1H ANA KALE" in str(karar):
+            karar = str(karar).replace("1H ANA KALE", "2. FREN (<-%35)")
+        elif "1G ÖNCÜ" in str(karar):
+            karar = str(karar).replace("1G ÖNCÜ", "2. FREN (<-%35)")
 
     return esik, deger, fren, kad_u, lot_v, karar
 # === MAC MINI TAMIR YAMASI BITIS ===
