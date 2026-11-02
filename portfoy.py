@@ -1412,6 +1412,31 @@ def prepare_and_style_df(df: pd.DataFrame, desired_cols: list, *args, **kwargs):
     return styler
 
 
+# === UST EKRAN HIZALAMA CSS BASLANGIC ===
+if '_base_inject_clean_css' not in globals() and 'inject_clean_css' in globals():
+    _base_inject_clean_css = inject_clean_css
+
+def inject_clean_css():
+    if '_base_inject_clean_css' in globals():
+        _base_inject_clean_css()
+    if st is None:
+        return
+    css_rules = (
+        '<style>'
+        '.block-container, div[data-testid="stAppViewBlockContainer"] { padding-top: 3.2rem !important; padding-bottom: 2.0rem !important; padding-left: 1.5rem !important; padding-right: 1.5rem !important; max-width: 99% !important; }'
+        'section[data-testid="stSidebar"] .block-container, section[data-testid="stSidebar"] div[data-testid="stSidebarUserContent"] { padding-top: 1.5rem !important; }'
+        '.kpi-grid, .midas-hero-grid { display: grid !important; grid-template-columns: repeat(4, minmax(0, 1fr)) !important; gap: 12px !important; margin-top: 0.2rem !important; margin-bottom: 1.0rem !important; align-items: stretch !important; width: 100% !important; }'
+        '.kpi-card, .midas-hero-card { height: 100% !important; min-height: 108px !important; padding: 12px 14px !important; display: flex !important; flex-direction: column !important; justify-content: space-between !important; box-sizing: border-box !important; margin: 0 !important; overflow: hidden !important; }'
+        '.kpi-val, .midas-hero-val { font-size: 1.32rem !important; line-height: 1.2 !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; }'
+        '.kpi-title, .midas-hero-lbl { font-size: 0.72rem !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; }'
+        '@media (max-width: 920px) { .kpi-grid, .midas-hero-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; } }'
+        '@media (max-width: 520px) { .kpi-grid, .midas-hero-grid { grid-template-columns: 1fr !important; } }'
+        '.stTabs [data-baseweb="tab-list"], div[role="radiogroup"] { gap: 10px !important; flex-wrap: wrap !important; }'
+        '</style>'
+    )
+    st.markdown(css_rules, unsafe_allow_html=True)
+# === UST EKRAN HIZALAMA CSS BITIS ===
+
 def main():
     icon_p = os.path.join(BASE_DIR, "portfoy_icon.png")
     st.set_page_config(
@@ -1516,7 +1541,7 @@ def main():
     with st.sidebar:
         st.markdown("### 💼 BEKAPRSI SİNYAL MERKEZİ")
         _us_sch = get_us_market_schedule_tsi()
-        st.caption(f"🕒 **Otomatik Seans Takvimi:**\n• **🇹🇷 BIST:** `10:00–18:00` *(Onay: `17:40 TSİ`)*\n• **🇺🇸 ABD ({_us_sch['tz_label'].split(' ')[0]}):** `{_us_sch['open_tsi']}–{_us_sch['close_tsi']}` *(Onay: `{_us_sch['mail_tsi']}`)*")
+        st.caption("🕒 **Seans:** 🇹🇷 BIST `10:00–18:00` *(17:40)* | 🇺🇸 ABD `17:30–00:00` *(23:35 TSİ)*")
         if st.button("🔄 Canlı Verileri Şimdi Yenile", use_container_width=True, type="primary"):
             st.cache_data.clear()
             st.rerun()
@@ -1653,13 +1678,13 @@ def main():
         ((df_us_crypto_radar["canli_rsi_1g"] <= 43.0) | (df_us_crypto_radar["dunku_rsi_1g"] < 40.0) | (df_us_crypto_radar["canli_rsi_1h"] < 40.0))
         & (df_us_crypto_radar["hedef_tutar"] > 0)
     ].sort_values("canli_rsi_1g")
-    df_us_yesil = df_us_dip[df_us_dip["degisim_pct"] > 0].copy()
+    df_us_yesil = df_us_dip[df_us_dip["karar"].str.startswith("🟢")].copy()
     df_us_bekle = df_us_dip[df_us_dip["degisim_pct"] <= 0].copy()
 
     df_bist_dip = df_bist_all[
         (df_bist_all["canli_rsi_1g"] <= 43.0) | (df_bist_all["dunku_rsi_1g"] < 40.0) | (df_bist_all["canli_rsi_1h"] < 40.0)
     ].sort_values("canli_rsi_1g")
-    df_bist_yesil = df_bist_dip[df_bist_dip["degisim_pct"] > 0].copy()
+    df_bist_yesil = df_bist_dip[df_bist_dip["karar"].str.startswith("🟢")].copy()
     df_bist_bekle = df_bist_dip[df_bist_dip["degisim_pct"] <= 0].copy()
 
     btc_row = df_live[df_live["ticker"] == "CURRENCY:BTCUSD"]
@@ -1842,5 +1867,5 @@ def main():
 
 
 if __name__ == "__main__":
-    if st is not None and os.environ.get("STREAMLIT_RUN_CONTEXT") != "TEST":
+    if st is not None and os.environ.get("PORTFOY_CLI_IMPORT") != "1":
         main()
