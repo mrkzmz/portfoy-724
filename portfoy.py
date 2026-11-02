@@ -946,6 +946,163 @@ def get_us_market_schedule_tsi() -> dict:
         'ny_time_str': ny_now.strftime('%H:%M %Z'),
     }
 
+# === MAC MINI TAMIR YAMASI BASLANGIC ===
+import urllib.parse
+
+
+def fetch_direct_series(yf_sym: str, period: str = "2y") -> pd.Series:
+    ctx = ssl._create_unverified_context()
+    sym_u = str(yf_sym).upper().strip()
+
+    if sym_u.endswith("-USD"):
+        b_sym = sym_u.replace("-USD", "USDT")
+        b_url = f"https://api.binance.com/api/v3/klines?symbol={b_sym}&interval=1d&limit=500"
+        try:
+            req = urllib.request.Request(b_url, headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req, context=ctx, timeout=6) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                if isinstance(data, list) and len(data) >= 20:
+                    dts = [pd.to_datetime(int(row[0]), unit="ms").normalize() for row in data]
+                    cls = [float(row[4]) for row in data]
+                    s = pd.Series(cls, index=pd.DatetimeIndex(dts), dtype=float)
+                    return s[~s.index.duplicated(keep="last")].sort_index()
+        except Exception:
+            pass
+
+    for host in ("query1.finance.yahoo.com", "query2.finance.yahoo.com"):
+        y_url = f"https://{host}/v8/finance/chart/{urllib.parse.quote(sym_u)}?range={period}&interval=1d"
+        try:
+            req = urllib.request.Request(y_url, headers={"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"})
+            with urllib.request.urlopen(req, context=ctx, timeout=6) as resp:
+                j = json.loads(resp.read().decode("utf-8"))
+                res_list = j.get("chart", {}).get("result") or []
+                if not res_list:
+                    continue
+                res0 = res_list[0]
+                ts_list = res0.get("timestamp") or []
+                q_list = res0.get("indicators", {}).get("quote") or []
+                if not ts_list or not q_list:
+                    continue
+                c_list = q_list[0].get("close") or []
+                pairs = [
+                    (pd.to_datetime(int(ts), unit="s").normalize(), float(c))
+                    for ts, c in zip(ts_list, c_list)
+                    if ts is not None and c is not None and float(c) > 0
+                ]
+                if len(pairs) >= 15:
+                    idx = pd.DatetimeIndex([p[0] for p in pairs])
+                    vals = [p[1] for p in pairs]
+                    s = pd.Series(vals, index=idx, dtype=float)
+                    return s[~s.index.duplicated(keep="last")].sort_index()
+        except Exception:
+            continue
+
+    return pd.Series(dtype=float)
+
+
+def analyze_price_history(df_hist: pd.DataFrame) -> dict:
+    s = extract_clean_close(df_hist)
+    if s is None or len(s) < 15:
+        return {}
+    s = s.dropna().astype(float)
+    if len(s) < 15:
+        return {}
+
+    if not isinstance(s.index, pd.DatetimeIndex):
+        s.index = pd.date_range(end=pd.Timestamp.today().normalize(), periods=len(s), freq="B")
+    else:
+        if s.index.tz is not None:
+            s.index = s.index.tz_localize(None)
+        s = s[~s.index.duplicated(keep="last")].sort_index()
+
+    fiyat = float(s.iloc[-1])
+    prev_fiyat = float(s.iloc[-2]) if len(s) >= 2 else fiyat
+    degisim_pct = round((fiyat - prev_fiyat) / prev_fiyat * 100.0, 2) if prev_fiyat > 0 else 0.0
+
+    rsi_1g_ser = compute_wilder_rsi_series(s, 14)
+    canli_rsi_1g = round(float(rsi_1g_ser.iloc[-1]), 1) if len(rsi_1g_ser) >= 1 else 50.0
+    dunku_rsi_1g = round(float(rsi_1g_ser.iloc[-2]), 1) if len(rsi_1g_ser) >= 2 else canli_rsi_1g
+
+    try:
+        s_weekly = s.resample("W-FRI").last().dropna()
+    except Exception:
+        s_weekly = s.iloc[::5]
+    if len(s_weekly) >= 15:
+        rsi_1h_ser = compute_wilder_rsi_series(s_weekly, 14)
+        canli_rsi_1h = round(float(rsi_1h_ser.iloc[-1]), 1)
+    else:
+        canli_rsi_1h = canli_rsi_1g
+
+    try:
+        s_monthly = s.resample("ME").last().dropna()
+    except Exception:
+        try:
+            s_monthly = s.resample("M").last().dropna()
+        except Exception:
+            s_monthly = s.iloc[::21]
+    if len(s_monthly) >= 15:
+        rsi_1a_ser = compute_wilder_rsi_series(s_monthly, 14)
+        canli_rsi_1a = round(float(rsi_1a_ser.iloc[-1]), 1)
+    else:
+        canli_rsi_1a = canli_rsi_1h
+
+    sma200 = round(float(s.tail(200).mean()), 2) if len(s) >= 20 else round(fiyat, 2)
+    sma200_fark_pct = round((fiyat - sma200) / sma200 * 100.0, 2) if sma200 > 0 else 0.0
+
+    s_52w = s.tail(252)
+    high52 = round(float(s_52w.max()), 2)
+    low52 = round(float(s_52w.min()), 2)
+    dd52_pct = round((fiyat - high52) / high52 * 100.0, 2) if high52 > 0 else 0.0
+    marj52_pct = round((high52 - fiyat) / fiyat * 100.0, 2) if fiyat > 0 else 0.0
+
+    tv_info = simulate_tradingview_cycle(s, rsi_1g_ser) if "simulate_tradingview_cycle" in globals() else {}
+
+    return {
+        "fiyat": round(fiyat, 2),
+        "prev_fiyat": round(prev_fiyat, 2),
+        "degisim_pct": degisim_pct,
+        "canli_rsi_1g": canli_rsi_1g,
+        "dunku_rsi_1g": dunku_rsi_1g,
+        "canli_rsi_1h": canli_rsi_1h,
+        "canli_rsi_1a": canli_rsi_1a,
+        "sma200": sma200,
+        "sma200_fark_pct": sma200_fark_pct,
+        "high52": high52,
+        "low52": low52,
+        "dd52_pct": dd52_pct,
+        "marj52_pct": marj52_pct,
+        "tv_sinyal": tv_info.get("tv_sinyal", "YOK"),
+        "tv_etiket": tv_info.get("tv_etiket", ""),
+        "tv_tepe": tv_info.get("tv_tepe", high52),
+        "tv_tepeden_dusus_pct": tv_info.get("tv_tepeden_dusus_pct", dd52_pct),
+        "tv_kademe_no": tv_info.get("tv_kademe_no", 1),
+        "tv_son_ekle_fiyat": tv_info.get("tv_son_ekle_fiyat", 0.0),
+        "tv_sonraki_esik": tv_info.get("tv_sonraki_esik", 0.0),
+    }
+
+
+_base_evaluate_portfolio_decision = evaluate_portfolio_decision
+
+
+def evaluate_portfolio_decision(row: dict) -> tuple:
+    esik, deger, fren, kad_u, lot_v, karar = _base_evaluate_portfolio_decision(row)
+    tck = str(row.get("ticker", ""))
+    fiyat = float(row.get("fiyat", 0.0))
+    chg = float(row.get("degisim_pct", 0.0))
+    cs = "₺" if tck.startswith("IST:") else "$"
+
+    if str(karar).startswith("🟢") and chg < 0.40 and fiyat > 0:
+        prev_close = fiyat / (1.0 + chg / 100.0) if (1.0 + chg / 100.0) > 0 else fiyat
+        tetik_f = round(prev_close * 1.004, 2)
+        lot_str = f"{lot_v:.4f}" if tck.startswith("CURRENCY:") else (f"{int(round(lot_v))}" if tck.startswith("IST:") else f"{lot_v:.2f}")
+        rsi_1h = float(row.get("canli_rsi_1h", 50.0))
+        kale_lbl = "1H ANA KALE DİPTE" if rsi_1h < 40.0 else "1G ÖNCÜ DİPTE"
+        karar = f"🔻 {kale_lbl} ({chg:+.2f}% < +0.40% Eşik) -> Yeşil Onay Tetik: >={tetik_f:,.2f}{cs} (+{kad_u:,.0f}{cs} = {lot_str} Adet)"
+
+    return esik, deger, fren, kad_u, lot_v, karar
+# === MAC MINI TAMIR YAMASI BITIS ===
+
+
 def inject_clean_css():
     css = """
     <style>
