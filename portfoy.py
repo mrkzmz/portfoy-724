@@ -1,14 +1,6 @@
 import warnings
 warnings.filterwarnings("ignore")
 # -*- coding: utf-8 -*-
-"""
-PORTFÖY — BEKAPRSI AL / SAT SİNYAL & 20 YILLIK HAFTALIK RSI SİSTEMİ (portfoy.py)
-Sadeleştirilmiş Tam Odaklı Mimari:
-1. Sol Menü: Hızlı Alış / Satış İşlem Kaydı & Nakit Havuzu Güncelleme
-2. Sekme 1: 📊 AL / SAT SİNYALLERİ (3 Sütunlu BEKAPRSI EKLE / KAR AL Kartları)
-3. Sekme 2: 💼 PORTFÖYÜM (24 Aktif Varlık) & 🎯 RADAR (55 Varlık) Tabloları (1G, 1H, 1A RSI & SMA 200)
-4. Sekme 3: 🏛️ 20 YILLIK (2006-2026) HAFTALIK RSI < 40 & SMA 200 ANALİZ SİSTEMİ
-"""
 
 import os
 import sys
@@ -741,17 +733,17 @@ def build_bekaprsi_html_email(df_live: pd.DataFrame, pool_usd: float) -> tuple:
         ((df_holdings["canli_rsi_1g"] <= 43.5) | (df_holdings["canli_rsi_1h"] < 40.0))
         & (df_holdings["hedef_tutar"] > df_holdings["korunan_ana_para"])
         & (~df_holdings["karar"].str.contains("Kârda Tut|KALE DOLU"))
-    ].sort_values("canli_rsi_1g")
+    ].assign(_p=lambda x: np.where(x["karar"].str.startswith("🟢"), 0, np.where(x["karar"].str.startswith(("🛑", "⏳", "⛔", "⚪")), 2, 1))).sort_values(["_p", "canli_rsi_1g"])
     df_elimde_sat = df_holdings[df_holdings["canli_rsi_1g"] >= 64.0].sort_values("canli_rsi_1g", ascending=False)
 
     df_us_dip = df_us_crypto_radar[
         ((df_us_crypto_radar["canli_rsi_1g"] <= 43.0) | (df_us_crypto_radar["dunku_rsi_1g"] < 40.0) | (df_us_crypto_radar["canli_rsi_1h"] < 40.0))
         & (df_us_crypto_radar["hedef_tutar"] > 0)
-    ].sort_values("canli_rsi_1g")
+    ].assign(_p=lambda x: np.where(x["karar"].str.startswith("🟢"), 0, np.where(x["karar"].str.startswith(("🛑", "⏳", "⛔", "⚪")), 2, 1))).sort_values(["_p", "canli_rsi_1g"])
 
     df_bist_dip = df_bist_all[
         (df_bist_all["canli_rsi_1g"] <= 43.0) | (df_bist_all["dunku_rsi_1g"] < 40.0) | (df_bist_all["canli_rsi_1h"] < 40.0)
-    ].sort_values("canli_rsi_1g")
+    ].assign(_p=lambda x: np.where(x["karar"].str.startswith("🟢"), 0, np.where(x["karar"].str.startswith(("🛑", "⏳", "⛔", "⚪")), 2, 1))).sort_values(["_p", "canli_rsi_1g"])
 
     def _rows_to_table(df_sec: pd.DataFrame, title_bg: str, title_txt: str) -> str:
         if df_sec.empty:
@@ -1237,6 +1229,12 @@ def evaluate_portfolio_decision(row: dict) -> tuple:
         if rsi_1a >= 40.0 and (str(karar).startswith("🟢") or str(karar).startswith("🔻") or str(karar).startswith("🔎")):
             return esik, deger, fren, 0.0, 0.0, f"🛑 BEKLE (2. Fren Aktif: {dd52:.1f}% <= -35% | 1A RSI: {rsi_1a:.1f})"
 
+    # 2B. 1. Fren (-%21 .. -%35 -> 1H RSI < 40 Şartı) ve RSI > 43.5 Nötr Kilidi
+    if -35.0 < dd52 <= -21.0 and rsi_1h >= 40.0 and (str(karar).startswith("🟢") or str(karar).startswith("🔻")):
+        return esik, deger, f"1. FREN ({dd52:.1f}%)", 0.0, 0.0, f"⏳ 1. FREN AKTİF ({dd52:.1f}% <= -21% | 1H RSI: {rsi_1h:.1f} >= 40 -> Haftalık Dip Bekle)"
+    if rsi_1g > 43.5 and float(row_safe.get("dunku_rsi_1g", 50.0)) >= 40.0 and rsi_1h >= 40.0 and str(karar).startswith("🟢"):
+        return esik, deger, fren, 0.0, 0.0, f"⚪ NÖTR / İZLE (1G RSI: {rsi_1g:.1f} > 43.5 | 1H RSI: {rsi_1h:.1f})"
+
     # 3. +%0.40 Gün Sonu Kapanış Güvenlik Eşiği Kesin Denetimi (BEKAPRSI Kural 6)
     if str(karar).startswith("🟢") and chg < 0.40 and fiyat > 0:
         prev_close = fiyat / (1.0 + chg / 100.0) if (1.0 + chg / 100.0) > 0 else fiyat
@@ -1423,9 +1421,10 @@ def inject_clean_css():
         return
     css_rules = (
         '<style>'
-        '.block-container, div[data-testid="stAppViewBlockContainer"] { padding-top: 3.2rem !important; padding-bottom: 2.0rem !important; padding-left: 1.5rem !important; padding-right: 1.5rem !important; max-width: 99% !important; }'
-        'section[data-testid="stSidebar"] .block-container, section[data-testid="stSidebar"] div[data-testid="stSidebarUserContent"] { padding-top: 1.5rem !important; }'
-        '.kpi-grid, .midas-hero-grid { display: grid !important; grid-template-columns: repeat(4, minmax(0, 1fr)) !important; gap: 12px !important; margin-top: 0.2rem !important; margin-bottom: 1.0rem !important; align-items: stretch !important; width: 100% !important; }'
+        'header[data-testid="stHeader"] { height: 2.0rem !important; background: transparent !important; }'
+        '.block-container, div[data-testid="stAppViewBlockContainer"] { padding-top: 2.2rem !important; padding-bottom: 2.0rem !important; padding-left: 1.5rem !important; padding-right: 1.5rem !important; max-width: 99% !important; }'
+        'section[data-testid="stSidebar"] .block-container, section[data-testid="stSidebar"] div[data-testid="stSidebarUserContent"] { padding-top: 1.4rem !important; padding-left: 1.0rem !important; padding-right: 1.0rem !important; }'
+        '.kpi-grid, .midas-hero-grid { display: grid !important; grid-template-columns: repeat(4, minmax(0, 1fr)) !important; gap: 12px !important; margin-top: 0.1rem !important; margin-bottom: 1.0rem !important; align-items: stretch !important; width: 100% !important; }'
         '.kpi-card, .midas-hero-card { height: 100% !important; min-height: 108px !important; padding: 12px 14px !important; display: flex !important; flex-direction: column !important; justify-content: space-between !important; box-sizing: border-box !important; margin: 0 !important; overflow: hidden !important; }'
         '.kpi-val, .midas-hero-val { font-size: 1.32rem !important; line-height: 1.2 !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; }'
         '.kpi-title, .midas-hero-lbl { font-size: 0.72rem !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; }'
@@ -1541,7 +1540,7 @@ def main():
     with st.sidebar:
         st.markdown("### 💼 BEKAPRSI SİNYAL MERKEZİ")
         _us_sch = get_us_market_schedule_tsi()
-        st.caption("🕒 **Seans:** 🇹🇷 BIST `10:00–18:00` *(17:40)* | 🇺🇸 ABD `17:30–00:00` *(23:35 TSİ)*")
+        st.caption("🕒 **Bülten:** `09:45` • `17:40` • `23:35`")
         if st.button("🔄 Canlı Verileri Şimdi Yenile", use_container_width=True, type="primary"):
             st.cache_data.clear()
             st.rerun()
@@ -1671,19 +1670,19 @@ def main():
         ((df_holdings["canli_rsi_1g"] <= 43.5) | (df_holdings["canli_rsi_1h"] < 40.0))
         & (df_holdings["hedef_tutar"] > df_holdings["korunan_ana_para"])
         & (~df_holdings["karar"].str.contains("Kârda Tut|KALE DOLU"))
-    ].sort_values("canli_rsi_1g")
+    ].assign(_p=lambda x: np.where(x["karar"].str.startswith("🟢"), 0, np.where(x["karar"].str.startswith(("🛑", "⏳", "⛔", "⚪")), 2, 1))).sort_values(["_p", "canli_rsi_1g"])
     df_elimde_sat = df_holdings[df_holdings["canli_rsi_1g"] >= 64.0].sort_values("canli_rsi_1g", ascending=False)
 
     df_us_dip = df_us_crypto_radar[
         ((df_us_crypto_radar["canli_rsi_1g"] <= 43.0) | (df_us_crypto_radar["dunku_rsi_1g"] < 40.0) | (df_us_crypto_radar["canli_rsi_1h"] < 40.0))
         & (df_us_crypto_radar["hedef_tutar"] > 0)
-    ].sort_values("canli_rsi_1g")
+    ].assign(_p=lambda x: np.where(x["karar"].str.startswith("🟢"), 0, np.where(x["karar"].str.startswith(("🛑", "⏳", "⛔", "⚪")), 2, 1))).sort_values(["_p", "canli_rsi_1g"])
     df_us_yesil = df_us_dip[df_us_dip["karar"].str.startswith("🟢")].copy()
     df_us_bekle = df_us_dip[df_us_dip["degisim_pct"] <= 0].copy()
 
     df_bist_dip = df_bist_all[
         (df_bist_all["canli_rsi_1g"] <= 43.0) | (df_bist_all["dunku_rsi_1g"] < 40.0) | (df_bist_all["canli_rsi_1h"] < 40.0)
-    ].sort_values("canli_rsi_1g")
+    ].assign(_p=lambda x: np.where(x["karar"].str.startswith("🟢"), 0, np.where(x["karar"].str.startswith(("🛑", "⏳", "⛔", "⚪")), 2, 1))).sort_values(["_p", "canli_rsi_1g"])
     df_bist_yesil = df_bist_dip[df_bist_dip["karar"].str.startswith("🟢")].copy()
     df_bist_bekle = df_bist_dip[df_bist_dip["degisim_pct"] <= 0].copy()
 
@@ -1825,13 +1824,13 @@ def main():
 
     with tab_liste:
         st.markdown(clean_html(f'<div class="section-banner"><span>💼 TABLO 1: ELİMDEKİ PORTFÖY VARLIKLARI ({len(df_holdings)} Aktif Kale)</span><span>Değer: {tot_port_val:,.2f} &#36; | Ana Para: {tot_port_q:,.2f} &#36;</span></div>'), unsafe_allow_html=True)
-        st.dataframe(prepare_and_style_df(df_holdings.sort_values("canli_rsi_1g"), cols_portfoy), column_config=col_cfg_common, use_container_width=True, hide_index=True, height=480)
+        st.dataframe(prepare_and_style_df(df_holdings.assign(_p=lambda x: np.where(x["karar"].str.startswith("🟢"), 0, np.where(x["karar"].str.startswith(("🛑", "⏳", "⛔", "⚪")), 2, 1))).sort_values(["_p", "canli_rsi_1g"]), cols_portfoy), column_config=col_cfg_common, use_container_width=True, hide_index=True, height=480)
 
         st.markdown(clean_html(f'<div class="section-banner" style="margin-top:18px;"><span>🇹🇷 TABLO 2: BIST (BORSA İSTANBUL) ÖMÜRLÜK KALE &amp; RADAR LİSTESİ ({len(df_bist_all)} Varlık — TL Bazlı)</span><span>Dip Bölgesindekiler: {len(df_bist_dip)} Varlık</span></div>'), unsafe_allow_html=True)
-        st.dataframe(prepare_and_style_df(df_bist_all.sort_values("canli_rsi_1g"), cols_radar), column_config=col_cfg_common, use_container_width=True, hide_index=True, height=460)
+        st.dataframe(prepare_and_style_df(df_bist_all.assign(_p=lambda x: np.where(x["karar"].str.startswith("🟢"), 0, np.where(x["karar"].str.startswith(("🛑", "⏳", "⛔", "⚪")), 2, 1))).sort_values(["_p", "canli_rsi_1g"]), cols_radar), column_config=col_cfg_common, use_container_width=True, hide_index=True, height=460)
 
         st.markdown(clean_html(f'<div class="section-banner" style="margin-top:18px;"><span>🎯 TABLO 3: HEDEFLEDİĞİMİZ ABD, ÜLKE ETF &amp; 7/24 KRİPTO LİSTESİ ({len(df_us_crypto_radar)} Varlık)</span><span>Hedef Kasası Olanlar &amp; Radar</span></div>'), unsafe_allow_html=True)
-        st.dataframe(prepare_and_style_df(df_us_crypto_radar.sort_values("canli_rsi_1g"), cols_radar), column_config=col_cfg_common, use_container_width=True, hide_index=True, height=460)
+        st.dataframe(prepare_and_style_df(df_us_crypto_radar.assign(_p=lambda x: np.where(x["karar"].str.startswith("🟢"), 0, np.where(x["karar"].str.startswith(("🛑", "⏳", "⛔", "⚪")), 2, 1))).sort_values(["_p", "canli_rsi_1g"]), cols_radar), column_config=col_cfg_common, use_container_width=True, hide_index=True, height=460)
 
     with tab_backtest:
         st.markdown(clean_html('<div class="section-banner"><span>🏛️ 20 YILLIK (2006-2026) HAFTALIK RSI &lt; 40 &amp; GÜNLÜK SMA 200 ANALİZ SİSTEMİ</span><span>ABD • BIST • Kripto</span></div>'), unsafe_allow_html=True)
