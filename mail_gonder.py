@@ -8,7 +8,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 from concurrent.futures import ThreadPoolExecutor
 
-os.environ["STREAMLIT_RUN_CONTEXT"] = "TEST"
+os.environ["PORTFOY_CLI_IMPORT"] = "1"
 import portfoy as pf
 
 def should_dispatch_now() -> tuple:
