@@ -1,3 +1,5 @@
+import warnings
+warnings.filterwarnings("ignore")
 # -*- coding: utf-8 -*-
 """
 PORTFÖY — BEKAPRSI AL / SAT SİNYAL & 20 YILLIK HAFTALIK RSI SİSTEMİ (portfoy.py)
@@ -947,7 +949,113 @@ def get_us_market_schedule_tsi() -> dict:
     }
 
 # === MAC MINI TAMIR YAMASI BASLANGIC ===
+import warnings
 import urllib.parse
+warnings.filterwarnings("ignore")
+
+GIRISIM_TICKERS = {"SOFI", "TMDX", "RKLB", "CRDO", "IOT"}
+
+
+def fetch_tradingview_live_metrics(ticker_raw: str) -> dict:
+    t_up = str(ticker_raw).upper().strip()
+    if t_up.startswith("INDEX"):
+        return {}
+    if t_up.startswith("IST:"):
+        clean_s = t_up.replace("IST:", "")
+        tv_tickers = [f"BIST:{clean_s}"]
+        scan_url = "https://scanner.tradingview.com/turkey/scan"
+    elif t_up.startswith("CURRENCY:"):
+        clean_s = t_up.replace("CURRENCY:", "").replace("USD", "USDT")
+        tv_tickers = [f"BINANCE:{clean_s}", f"COINBASE:{t_up.replace('CURRENCY:', '')}"]
+        scan_url = "https://scanner.tradingview.com/crypto/scan"
+    else:
+        clean_s = "UFO" if t_up == "NASA" else t_up
+        tv_tickers = [f"NASDAQ:{clean_s}", f"NYSE:{clean_s}", f"AMEX:{clean_s}"]
+        scan_url = "https://scanner.tradingview.com/america/scan"
+
+    payload = {
+        "symbols": {"tickers": tv_tickers, "query": {"types": []}},
+        "columns": [
+            "close", "change", "RSI", "RSI[1]", "RSI|1W", "RSI|1M",
+            "SMA200", "price_52_week_high", "price_52_week_low"
+        ],
+    }
+    try:
+        ctx = ssl._create_unverified_context()
+        body = json.dumps(payload).encode("utf-8")
+        req = urllib.request.Request(
+            scan_url,
+            data=body,
+            headers={"Content-Type": "application/json", "User-Agent": "Mozilla/5.0"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, context=ctx, timeout=6) as resp:
+            j = json.loads(resp.read().decode("utf-8"))
+            data_rows = j.get("data") or []
+            if not data_rows:
+                return {}
+            d = data_rows[0].get("d") or []
+            if len(d) < 9 or d[0] is None or float(d[0]) <= 0:
+                return {}
+            fiyat = round(float(d[0]), 2)
+            chg = round(float(d[1]), 2) if d[1] is not None else 0.0
+            prev_f = round(fiyat / (1.0 + chg / 100.0), 2) if (1.0 + chg / 100.0) > 0 else fiyat
+            rsi_1g = round(float(d[2]), 1) if d[2] is not None else 50.0
+            dun_rsi_1g = round(float(d[3]), 1) if d[3] is not None else rsi_1g
+            rsi_1h = round(float(d[4]), 1) if d[4] is not None else rsi_1g
+            rsi_1a = round(float(d[5]), 1) if d[5] is not None else rsi_1h
+            sma200 = round(float(d[6]), 2) if d[6] is not None and float(d[6]) > 0 else fiyat
+            sma200_fark = round((fiyat - sma200) / sma200 * 100.0, 2) if sma200 > 0 else 0.0
+            h52 = round(float(d[7]), 2) if d[7] is not None and float(d[7]) > 0 else fiyat
+            l52 = round(float(d[8]), 2) if d[8] is not None and float(d[8]) > 0 else fiyat
+            dd52 = round((fiyat - h52) / h52 * 100.0, 2) if h52 > 0 else 0.0
+            marj52 = round((h52 - fiyat) / fiyat * 100.0, 2) if fiyat > 0 else 0.0
+            return {
+                "fiyat": fiyat,
+                "prev_fiyat": prev_f,
+                "degisim_pct": chg,
+                "canli_rsi_1g": rsi_1g,
+                "dunku_rsi_1g": dun_rsi_1g,
+                "canli_rsi_1h": rsi_1h,
+                "canli_rsi_1a": rsi_1a,
+                "sma200": sma200,
+                "sma200_fark_pct": sma200_fark,
+                "high52": h52,
+                "low52": l52,
+                "dd52_pct": dd52,
+                "marj52_pct": marj52,
+                "tv_sinyal": "YOK",
+                "tv_etiket": "TV Canlı",
+                "tv_tepe": h52,
+                "tv_tepeden_dusus_pct": dd52,
+                "tv_kademe_no": 1,
+                "tv_son_ekle_fiyat": 0.0,
+                "tv_sonraki_esik": 0.0,
+            }
+    except Exception:
+        return {}
+
+
+if "_orig_get_fallback_metrics" not in globals() and "get_fallback_metrics" in globals():
+    _orig_get_fallback_metrics = get_fallback_metrics
+
+
+def get_fallback_metrics(tck_raw: str) -> dict:
+    tv_m = fetch_tradingview_live_metrics(tck_raw)
+    if tv_m and tv_m.get("fiyat", 0.0) > 0:
+        return tv_m
+    base_m = _orig_get_fallback_metrics(tck_raw) if "_orig_get_fallback_metrics" in globals() else {}
+    defaults = {
+        "fiyat": 0.0, "prev_fiyat": 0.0, "degisim_pct": 0.0,
+        "canli_rsi_1g": 50.0, "dunku_rsi_1g": 50.0, "canli_rsi_1h": 50.0, "canli_rsi_1a": 50.0,
+        "sma200": 0.0, "sma200_fark_pct": 0.0, "high52": 0.0, "low52": 0.0,
+        "dd52_pct": 0.0, "marj52_pct": 0.0, "tv_sinyal": "YOK", "tv_etiket": "",
+        "tv_tepe": 0.0, "tv_tepeden_dusus_pct": 0.0, "tv_kademe_no": 1,
+        "tv_son_ekle_fiyat": 0.0, "tv_sonraki_esik": 0.0,
+    }
+    if isinstance(base_m, dict):
+        defaults.update({k: v for k, v in base_m.items() if v is not None})
+    return defaults
 
 
 def fetch_direct_series(yf_sym: str, period: str = "2y") -> pd.Series:
@@ -1081,31 +1189,61 @@ def analyze_price_history(df_hist: pd.DataFrame) -> dict:
     }
 
 
-_base_evaluate_portfolio_decision = evaluate_portfolio_decision
+if "_orig_evaluate_portfolio_decision" not in globals() and "evaluate_portfolio_decision" in globals():
+    _orig_evaluate_portfolio_decision = evaluate_portfolio_decision
 
 
 def evaluate_portfolio_decision(row: dict) -> tuple:
-    esik, deger, fren, kad_u, lot_v, karar = _base_evaluate_portfolio_decision(row)
-    tck = str(row.get("ticker", ""))
-    fiyat = float(row.get("fiyat", 0.0))
-    chg = float(row.get("degisim_pct", 0.0))
-    dd52 = float(row.get("dd52_pct", 0.0))
+    row_safe = dict(row)
+    tck = str(row_safe.get("ticker", "")).strip()
+    if "fiyat" not in row_safe or float(row_safe.get("fiyat") or 0.0) <= 0:
+        fb = get_fallback_metrics(tck)
+        for k_fb, v_fb in fb.items():
+            if k_fb not in row_safe or row_safe.get(k_fb) is None or (k_fb == "fiyat" and float(row_safe.get("fiyat") or 0.0) <= 0):
+                row_safe[k_fb] = v_fb
+
+    for req_k, def_v in [
+        ("fiyat", 0.0), ("degisim_pct", 0.0), ("canli_rsi_1g", 50.0), ("dunku_rsi_1g", 50.0),
+        ("canli_rsi_1h", 50.0), ("canli_rsi_1a", 50.0), ("sma200", 0.0), ("sma200_fark_pct", 0.0),
+        ("high52", 0.0), ("low52", 0.0), ("dd52_pct", 0.0), ("marj52_pct", 0.0),
+        ("eldeki_adet", 0.0), ("ort_maliyet", 0.0), ("son_alim", 0.0),
+        ("korunan_ana_para", 0.0), ("hedef_tutar", 0.0),
+    ]:
+        if req_k not in row_safe or row_safe[req_k] is None:
+            row_safe[req_k] = def_v
+
+    esik, deger, fren, kad_u, lot_v, karar = _orig_evaluate_portfolio_decision(row_safe)
+    fiyat = float(row_safe.get("fiyat", 0.0))
+    chg = float(row_safe.get("degisim_pct", 0.0))
+    dd52 = float(row_safe.get("dd52_pct", 0.0))
+    rsi_1g = float(row_safe.get("canli_rsi_1g", 50.0))
+    rsi_1h = float(row_safe.get("canli_rsi_1h", 50.0))
+    rsi_1a = float(row_safe.get("canli_rsi_1a", 50.0))
+    adet = float(row_safe.get("eldeki_adet", 0.0))
+    ana_para = float(row_safe.get("korunan_ana_para", 0.0))
     cs = "₺" if tck.startswith("IST:") else "$"
 
+    # 1. S-Eğrisi Girişim Sepeti (SOFI, TMDX, RKLB, CRDO, IOT): 2x Ana Para Çekimi ve Zararda Ekleme Yasağı
+    if tck in GIRISIM_TICKERS and adet > 0 and ana_para > 0:
+        if deger >= 2.0 * ana_para:
+            cek_lot = round(ana_para / fiyat, 2) if fiyat > 0 else 0.0
+            return esik, deger, fren, ana_para, cek_lot, f"🔥 2X GİRİŞİM HASADI (+%{((deger/ana_para)-1)*100:.0f}) -> {ana_para:,.0f}$ Ana Parayı Çek ({cek_lot:.2f} Adet Sat), Kalanı Bedava Bırak!"
+        elif str(karar).startswith("🟢"):
+            return esik, deger, fren, 0.0, 0.0, "⛔ GİRİŞİM TEK KURŞUN DOLU (Zararda / 2x Öncesi Ekleme Yasak)"
+
+    # 2. 2. Fren (-%35) Kesin Kilidi (TMDX -%56.2, MGROS -%41.0 vb. için):
+    if dd52 <= -35.0:
+        fren = f"2. FREN ({dd52:.1f}%)"
+        if rsi_1a >= 40.0 and (str(karar).startswith("🟢") or str(karar).startswith("🔻") or str(karar).startswith("🔎")):
+            return esik, deger, fren, 0.0, 0.0, f"🛑 BEKLE (2. Fren Aktif: {dd52:.1f}% <= -35% | 1A RSI: {rsi_1a:.1f})"
+
+    # 3. +%0.40 Gün Sonu Kapanış Güvenlik Eşiği Kesin Denetimi (BEKAPRSI Kural 6)
     if str(karar).startswith("🟢") and chg < 0.40 and fiyat > 0:
         prev_close = fiyat / (1.0 + chg / 100.0) if (1.0 + chg / 100.0) > 0 else fiyat
         tetik_f = round(prev_close * 1.004, 2)
         lot_str = f"{lot_v:.4f}" if tck.startswith("CURRENCY:") else (f"{int(round(lot_v))}" if tck.startswith("IST:") else f"{lot_v:.2f}")
-        rsi_1h = float(row.get("canli_rsi_1h", 50.0))
-        kale_lbl = "2. FREN (<-%35) DİPTE" if dd52 <= -35.0 else ("1H ANA KALE DİPTE" if rsi_1h < 40.0 else "1G ÖNCÜ DİPTE")
+        kale_lbl = "1H ANA KALE DİPTE" if rsi_1h < 40.0 else "1G ÖNCÜ DİPTE"
         karar = f"🔻 {kale_lbl} ({chg:+.2f}% < +0.40% Eşik) -> Yeşil Onay Tetik: >={tetik_f:,.2f}{cs} (+{kad_u:,.0f}{cs} = {lot_str} Adet)"
-
-    if dd52 <= -35.0:
-        fren = "2. FREN (<-%35)"
-        if "1H ANA KALE" in str(karar):
-            karar = str(karar).replace("1H ANA KALE", "2. FREN (<-%35)")
-        elif "1G ÖNCÜ" in str(karar):
-            karar = str(karar).replace("1G ÖNCÜ", "2. FREN (<-%35)")
 
     return esik, deger, fren, kad_u, lot_v, karar
 # === MAC MINI TAMIR YAMASI BITIS ===
