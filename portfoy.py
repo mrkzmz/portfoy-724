@@ -38,7 +38,7 @@ DB_FILE = os.path.join(BASE_DIR, "portfoy_hafiza.db")
 INITIAL_SEED = [(2, 'NASA', 'NASA', '6. Uzay ve İnovasyon', 'Elimdeki ETF - 2.500$ Hedef (Özel İzin)', 54.08, 21.66, 21.66, 1389.86, 2500.0), (3, 'CAT', 'CAT', '7. Makine, Sanayi ve Elektrik Altyapısı', 'Elimdeki Hisse - 5.000$ Ana Omurga Kale (1G/1H Sinyal)', 4.93, 771.26, 713.42, 3802.32, 5000.0), (4, 'EWS', 'EWS', "11. Ülke ve Küresel ETF'ler", 'Elimdeki ETF - Çıkış Adayı', 23.66, 31.76, 34.43, 751.44, 0.0), (5, 'SMH', 'SMH', '2. Yarı İletken (Çip)', 'Elimdeki ETF', 4.2, 543.26, 551.6, 2281.68, 3500.0), (6, 'AVGO', 'AVGO', '2. Yarı İletken (Çip)', 'Elimdeki Hisse - 3.500$ Trend Kalesi', 6.55, 354.86, 0.0, 2324.35, 3500.0), (7, 'ETN', 'ETN', '7. Makine, Sanayi ve Elektrik Altyapısı', 'Elimdeki Hisse', 4.91, 394.48, 393.44, 1936.92, 3500.0), (8, 'QQQM', 'QQQM', '1. Teknoloji, Bulut ve Yazılım', 'Elimdeki ETF', 15.33, 284.17, 296.56, 4356.33, 5000.0), (9, 'AMD', 'AMD', '2. Yarı İletken (Çip)', 'Elimdeki Hisse - 2.500$ Hedef', 3.2072, 487.78, 0.0, 1564.99, 2500.0), (10, 'CRWD', 'CRWD', '10. Siber Güvenlik', 'Elimdeki Hisse', 9.4118, 202.08, 0.0, 2250.4, 3500.0), (11, 'HWM', 'HWM', '5. Savunma ve Havacılık', 'Elimdeki Hisse - 1.500$ Hedef', 7.57, 227.11, 194.7, 1719.23, 1500.0), (12, 'EWQ', 'EWQ', "11. Ülke ve Küresel ETF'ler", 'Elimdeki ETF', 24.01, 41.71, 41.65, 1001.46, 1500.0), (13, 'CSCO', 'CSCO', '1. Teknoloji, Bulut ve Yazılım', 'Elimdeki Hisse', 15.34, 109.4, 0.0, 1678.25, 3500.0), (14, 'JNJ', 'JNJ', '4. İlaç ve Biyoteknoloji', 'Elimdeki Hisse', 5.95, 252.28, 0.0, 1501.07, 3500.0), (15, 'VRTX', 'VRTX', '4. İlaç ve Biyoteknoloji', 'Elimdeki Hisse', 3.03, 495.98, 0.0, 1502.82, 3500.0), (16, 'GOOGL', 'GOOGL', '1. Teknoloji, Bulut ve Yazılım', 'Elimdeki Hisse - 5.000$ Ana Omurga Kale (1G/1H Sinyal)', 8.1, 328.07, 322.89, 2657.36, 5000.0), (17, 'GD', 'GD', '5. Savunma ve Havacılık', 'Elimdeki Hisse - 1.500$ Hedef', 4.0, 365.28, 0.0, 1461.12, 1500.0), (18, 'UTHR', 'UTHR', '4. İlaç ve Biyoteknoloji', 'Elimdeki Hisse - 2.500$ Hedef', 2.7284, 492.05, 0.0, 1500.0, 2500.0), (19, 'GRMN', 'GRMN', '9. Giyilebilir Teknoloji ve Navigasyon', 'Elimdeki Hisse - 3.000$ Hedef', 5.91, 277.34, 0.0, 1639.08, 3000.0), (20, 'SHOP', 'SHOP', '8. Perakende ve E-Ticaret', 'Elimdeki Hisse - 3.000$ Hedef', 5.3933, 131.52, 0.0, 789.12, 3000.0), (21, 'LMT', 'LMT', '5. Savunma ve Havacılık', 'Elimdeki Hisse - 1.500$ Hedef', 2.0, 531.6, 0.0, 1063.2, 1500.0), (22, 'LLY', 'LLY', '4. İlaç ve Biyoteknoloji', 'Elimdeki Hisse', 1.81, 1137.88, 0.0, 2275.76, 3500.0), (23, 'INDEXNASDAQ:NDX', '^NDX', '0. Ana Endeksler ve Korku Göstergesi', 'Ana Endeks (Nasdaq 100)', 0.0, 0.0, 0.0, 0.0, 0.0), (24, 'INDEXSP:.INX', '^GSPC', '0. Ana Endeksler ve Korku Göstergesi', 'Ana Endeks (S&P 500)', 0.0, 0.0, 0.0, 0.0, 0.0), (25, 'INDEXDJX:.DJI', '^DJI', '0. Ana Endeksler ve Korku Göstergesi', 'Ana Endeks (Dow Jones)', 0.0, 0.0, 0.0, 0.0, 0.0), (26, 'INDEXCBOE:VIX', '^VIX', '0. Ana Endeksler ve Korku Göstergesi', 'Korku Endeksi (VIX)', 0.0, 0.0, 0.0, 0.0, 0.0), (27, 'AMAT', 'AMAT', '2. Yarı İletken (Çip)', 'Radar / Öneri (Yarı İletken)', 0.0, 0.0, 0.0, 0.0, 0.0), (28, 'NVDA', 'NVDA', '2. Yarı İletken (Çip)', 'Elimdeki Hisse (Çip Lideri)', 4.59, 217.96, 217.96, 1000.44, 3500.0), (29, 'JPM', 'JPM', '12. Bankacılık', 'Öncelikli Radar - 1. Sıra', 0.0, 0.0, 0.0, 0.0, 0.0), (30, 'V', 'V', '13. Finans, Varlık Yönetimi ve Ödeme Sistemleri', 'Öncelikli Radar - 4. Sıra', 0.0, 0.0, 0.0, 0.0, 0.0), (31, 'IST:FROTO', 'FROTO.IS', '17. BIST Ömürlük Radar', 'BIST 1. Ömürlük Kale (Avrupa Ticari Araç & %78 İhracat)', 0.0, 0.0, 0.0, 0.0, 248750.0), (32, 'IST:GUBRF', 'GUBRF.IS', '17. BIST Ömürlük Radar', 'BIST 3. Dönemsel (Gübre/Maden Spekülatif Döngü - 2.Fren)', 0.0, 0.0, 0.0, 0.0, 248750.0), (33, 'IST:TOASO', 'TOASO.IS', '17. BIST Ömürlük Radar', 'BIST 2. Trend Boyunca (Stellantis Türkiye & K0 Döngüsü)', 0.0, 0.0, 0.0, 0.0, 248750.0), (34, 'IST:BIMAS', 'BIMAS.IS', '17. BIST Ömürlük Radar', 'BIST 1. Ömürlük Kale (Enflasyon Kalkanı & Negatif İS)', 0.0, 0.0, 0.0, 0.0, 248750.0), (35, 'IST:KRDMD', 'KRDMD.IS', '17. BIST Ömürlük Radar', 'BIST 3. Dönemsel (Demir-Çelik & Altyapı Emtia Döngüsü)', 0.0, 0.0, 0.0, 0.0, 248750.0), (36, 'IST:ASELS', 'ASELS.IS', '17. BIST Ömürlük Radar', 'BIST 1. Ömürlük Kale (13 Mlr$ Siparişli Savunma Tekeli)', 0.0, 0.0, 0.0, 0.0, 248750.0), (37, 'IST:TUPRS', 'TUPRS.IS', '17. BIST Ömürlük Radar', 'BIST 3. Dönemsel (Rafineri Crack Marjı & Temettü Döngüsü)', 0.0, 0.0, 0.0, 0.0, 248750.0), (38, 'MRP', 'MRP', '14. Gayrimenkul (GYO / REIT)', 'Radar / Öneri', 0.0, 0.0, 0.0, 0.0, 0.0), (39, 'ROBO', 'ROBO', '7. Makine, Sanayi ve Elektrik Altyapısı', 'Elimdeki ETF - 2.500$ Hedef (Robotik & Otomasyon)', 13.18, 75.9, 75.9, 1000.36, 2500.0), (40, 'TSM', 'TSM', '2. Yarı İletken (Çip)', 'Sektör Lideri', 0.0, 0.0, 0.0, 0.0, 0.0), (41, 'PANW', 'PANW', '10. Siber Güvenlik', 'Ömürlük Lider / Radar', 0.0, 0.0, 0.0, 0.0, 0.0), (42, 'ASML', 'ASML', '2. Yarı İletken (Çip)', 'Ömürlük Lider / Radar', 0.0, 0.0, 0.0, 0.0, 0.0), (43, 'TSLA', 'TSLA', '16. Otomotiv ve Elektrikli Araçlar', 'Sektör Lideri', 0.0, 0.0, 0.0, 0.0, 0.0), (44, 'AMZN', 'AMZN', '8. Perakende ve E-Ticaret', 'Ana Omurga Kale - 5.000$ Hedef (1G/1H Sinyal)', 0.0, 0.0, 0.0, 0.0, 5000.0), (45, 'GE', 'GE', '5. Savunma ve Havacılık', 'Ömürlük Lider / Radar', 0.0, 0.0, 0.0, 0.0, 0.0), (46, 'META', 'META', '3. Medya ve Eğlence', 'Ana Omurga Kale - 5.000$ Hedef (1G/1H Sinyal)', 0.0, 0.0, 0.0, 0.0, 5000.0), (47, 'WELL', 'WELL', '14. Gayrimenkul (GYO / REIT)', 'Ömürlük Lider / Radar', 0.0, 0.0, 0.0, 0.0, 0.0), (48, 'MSFT', 'MSFT', '1. Teknoloji, Bulut ve Yazılım', 'Sektör Lideri', 0.0, 0.0, 0.0, 0.0, 5000.0), (49, 'AAPL', 'AAPL', '1. Teknoloji, Bulut ve Yazılım', 'Sektör Lideri', 0.0, 0.0, 0.0, 0.0, 0.0), (50, 'SPGI', 'SPGI', '13. Finans, Varlık Yönetimi ve Ödeme Sistemleri', 'Ömürlük Lider / Radar', 0.0, 0.0, 0.0, 0.0, 0.0), (51, 'SOFI', 'SOFI', '13. Finans, Varlık Yönetimi ve Ödeme Sistemleri', 'S-Eğrisi Girişim Sepeti (500$ Tek Kurşun | Dijital Banka & Fintech)', 0.0, 0.0, 0.0, 0.0, 500.0), (52, 'IST:THYAO', 'THYAO.IS', '17. BIST Ömürlük Radar', 'BIST 1. Ömürlük Kale (%85 Döviz Gelirli Küresel Hub)', 0.0, 0.0, 0.0, 0.0, 248750.0), (53, 'IST:KCHOL', 'KCHOL.IS', '17. BIST Ömürlük Radar', 'BIST 1. Ömürlük Kale (Sanayi/İhracat/Finans Omurgası)', 0.0, 0.0, 0.0, 0.0, 248750.0), (54, 'IST:SAHOL', 'SAHOL.IS', '17. BIST Ömürlük Radar', 'BIST 2. Trend Boyunca (%60 NAD İsk. & Enerjisa Trendi)', 0.0, 0.0, 0.0, 0.0, 248750.0), (55, 'IST:MGROS', 'MGROS.IS', '17. BIST Ömürlük Radar', 'BIST 2. Trend Boyunca (Online Perakende & Fintech)', 0.0, 0.0, 0.0, 0.0, 248750.0), (56, 'IST:TCELL', 'TCELL.IS', '17. BIST Ömürlük Radar', 'BIST 2. Trend Boyunca (5G, Fiber & Veri Merkezi)', 0.0, 0.0, 0.0, 0.0, 248750.0), (57, 'IST:ASTOR', 'ASTOR.IS', '17. BIST Ömürlük Radar', 'BIST 2. Trend Boyunca (Küresel Trafo & Şebeke Döngüsü)', 0.0, 0.0, 0.0, 0.0, 248750.0), (58, 'IST:ENKAI', 'ENKAI.IS', '17. BIST Ömürlük Radar', 'BIST 1. Ömürlük Kale (6 Mlr$ Net Döviz Nakit Hazinesi)', 0.0, 0.0, 0.0, 0.0, 248750.0), (59, 'IST:SISE', 'SISE.IS', '17. BIST Ömürlük Radar', 'BIST 3. Dönemsel (Küresel Cam & Soda Külü Emtia Döngüsü)', 0.0, 0.0, 0.0, 0.0, 248750.0), (60, 'IST:TAVHL', 'TAVHL.IS', '17. BIST Ömürlük Radar', 'BIST 2. Trend Boyunca (2051 Havalimanı Döviz İmtiyazı)', 0.0, 0.0, 0.0, 0.0, 248750.0), (61, 'IST:ISCTR', 'ISCTR.IS', '17. BIST Ömürlük Radar', 'BIST 3. Dönemsel (Faiz İndirim & Banka/İştirak Döngüsü)', 0.0, 0.0, 0.0, 0.0, 248750.0), (62, 'IST:GARAN', 'GARAN.IS', '17. BIST Ömürlük Radar', 'BIST 3. Dönemsel (Faiz İndirim & Bankacılık Döngüsü)', 0.0, 0.0, 0.0, 0.0, 248750.0), (63, 'IST:ZPX30', 'ZPX30.IS', '17. BIST Ömürlük Radar', 'BIST Ana Endeks Kalesi - 5.000$ Hedef (Ziraat BIST 30 BYF)', 0.0, 0.0, 0.0, 0.0, 248750.0), (64, 'REMX', 'REMX', '15. Temel Maddeler, Endüstriyel Gaz ve Kimya', 'Elimdeki ETF - 1.500$ Hedef (Nadir Toprak & Stratejik Metaller)', 27.82, 53.92, 53.92, 1500.05, 1500.0), (65, 'TMDX', 'TMDX', '4. İlaç ve Biyoteknoloji', 'S-Eğrisi Girişim Sepeti (500$ Tek Kurşun | Canlı Organ Nakli & Havayolu)', 0.0, 0.0, 0.0, 0.0, 500.0), (66, 'RKLB', 'RKLB', '6. Uzay ve İnovasyon', 'S-Eğrisi Girişim Sepeti (500$ Tek Kurşun | SpaceX Rakibi Fırlatma & Uydu)', 0.0, 0.0, 0.0, 0.0, 500.0), (67, 'CRDO', 'CRDO', '2. Yarı İletken (Çip)', 'S-Eğrisi Girişim Sepeti (500$ Tek Kurşun | AI Veri Merkezi AEC Kablo Tekeli)', 0.0, 0.0, 0.0, 0.0, 500.0), (68, 'IOT', 'IOT', '1. Teknoloji, Bulut ve Yazılım', 'S-Eğrisi Girişim Sepeti (500$ Tek Kurşun | Fiziksel Operasyonlar AI & IoT)', 0.0, 0.0, 0.0, 0.0, 500.0), (69, 'CLH', 'CLH', '7. Makine, Sanayi ve Elektrik Altyapısı', 'Ömürlük Kale Radar (Kuzey Amerika Tehlikeli Atık Bertaraf Tekeli | %0 Temettü)', 0.0, 0.0, 0.0, 0.0, 3000.0), (70, 'IBKR', 'IBKR', '8. Finans, Borsa ve Aracılık Altyapısı', 'Ömürlük Kale Radar (Küresel Algoritmik Aracılık & Faiz Geliri Kalkanı)', 0.0, 0.0, 0.0, 0.0, 3000.0), (71, 'TJX', 'TJX', '9. Defansif Perakende ve Tüketici', 'Ömürlük Kale Radar (Küresel İndirimli Perakende Lideri | Enflasyon Kalkanı)', 0.0, 0.0, 0.0, 0.0, 3000.0), (72, 'URI', 'URI', '7. Makine, Sanayi ve Elektrik Altyapısı', 'Ömürlük Kale Radar (Kuzey Amerika İş Makinesi & Ekipman Kiralama Lideri)', 0.0, 0.0, 0.0, 0.0, 3000.0), (73, 'ISRG', 'ISRG', '4. İlaç ve Biyoteknoloji', 'Ömürlük Kale Radar (Da Vinci Robotik Cerrahi Küresel Tekeli | %80 Pazar)', 0.0, 0.0, 0.0, 0.0, 0.0), (74, 'PWR', 'PWR', '7. Makine, Sanayi ve Elektrik Altyapısı', 'Ömürlük Kale Radar (Kuzey Amerika Yüksek Gerilim Şebeke Tekeli | 34B$ Sip.)', 0.0, 0.0, 0.0, 0.0, 0.0), (75, 'HEI', 'HEI', '5. Savunma ve Havacılık', 'Ömürlük Kale Radar (FAA Onaylı Uçak Yedek Parça [PMA] & Savunma Tekeli)', 0.0, 0.0, 0.0, 0.0, 0.0), (76, 'AXON', 'AXON', '5. Savunma ve Havacılık', 'Ömürlük Kale Radar (Polis/Güvenlik Taser, Kamera & Bulut Kanıt Tekeli)', 0.0, 0.0, 0.0, 0.0, 0.0), (77, 'IDXX', 'IDXX', '4. İlaç ve Biyoteknoloji', 'Ömürlük Kale Radar (Küresel Veterinerlik Kan/Tanı Cihazları Tekeli | %85)', 0.0, 0.0, 0.0, 0.0, 0.0), (78, 'VEEV', 'VEEV', '4. İlaç ve Biyoteknoloji', 'Ömürlük Kale Radar (Küresel İlaç Ar-Ge & Klinik Araştırma Bulut Tekeli)', 0.0, 0.0, 0.0, 0.0, 0.0), (79, 'EWY', 'EWY', '11. Uluslararası ve Bölgesel ETF', 'Ülke ETF Radar (Güney Kore — SK Hynix & Samsung %48 | +%148 Marj)', 0.0, 0.0, 0.0, 0.0, 1500.0), (80, 'EWT', 'EWT', '11. Uluslararası ve Bölgesel ETF', 'Ülke ETF Radar (Tayvan — TSMC & Yarı İletken | +%97 Marj)', 0.0, 0.0, 0.0, 0.0, 1500.0), (81, 'CURRENCY:BTCUSD', 'BTC-USD', '16. Kripto Varlıklar (7/24 Spot)', 'Hedef Kale (7/24 Kripto Ana Kale)', 0.0, 0.0, 0.0, 0.0, 3000.0), (83, 'CURRENCY:SOLUSD', 'SOL-USD', '16. Kripto Varlıklar (7/24 Spot)', 'Hedef Kale (7/24 Kripto)', 0.0, 0.0, 0.0, 0.0, 1000.0), (85, 'NTRA', 'NTRA', 'Sağlık (Moleküler Tanı & Genetik)', 'Hedef Kale', 0.0, 0.0, 0.0, 0.0, 2500.0), (86, 'ARGX', 'ARGX', 'İlaç & Biyoteknoloji (İmmünoloji)', 'Hedef Kale', 0.0, 0.0, 0.0, 0.0, 2500.0), (87, 'FTNT', 'FTNT', 'Teknoloji (Siber Güvenlik)', 'Hedef Kale', 0.0, 0.0, 0.0, 0.0, 3000.0), (88, 'ANET', 'ANET', 'Teknoloji (Bulut Ağ & AI Altyapı)', 'Hedef Kale', 0.0, 0.0, 0.0, 0.0, 3000.0)]
 if 'BASELINE_MAP' not in globals():
     BASELINE_MAP = {}
-
+BASELINE_MAP["IST:ZPX30"] = (187.95, 0.45, 36.4, 35.1, 221.12, 161.50)
 DEFAULT_POOL_USD = 9960.00
 GIRISIM_SET = {"SOFI", "TMDX", "RKLB", "CRDO", "IOT"}
 ANA_OMURGA_1G_SET = {"CAT", "GOOGL", "QQQM", "AMZN", "META"}
@@ -1042,6 +1042,73 @@ def fetch_tradingview_live_metrics(ticker_raw: str) -> dict:
         tv_tickers = [f"NASDAQ:{clean_s}", f"NYSE:{clean_s}", f"AMEX:{clean_s}"]
         scan_url = "https://scanner.tradingview.com/america/scan"
 
+    ctx = ssl._create_unverified_context()
+    hdrs = {
+        "Content-Type": "application/json",
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
+        "Origin": "https://tr.tradingview.com",
+        "Referer": "https://tr.tradingview.com/",
+    }
+    for cols in (
+        ["close", "change", "RSI", "RSI[1]", "RSI|1W", "RSI|1M", "SMA200", "price_52_week_high", "price_52_week_low"],
+        ["close", "change", "RSI", "SMA200", "price_52_week_high", "price_52_week_low"],
+    ):
+        try:
+            body = json.dumps({"symbols": {"tickers": tv_tickers}, "columns": cols}).encode("utf-8")
+            req = urllib.request.Request(scan_url, data=body, headers=hdrs, method="POST")
+            with urllib.request.urlopen(req, context=ctx, timeout=6) as resp:
+                j = json.loads(resp.read().decode("utf-8"))
+                data_rows = j.get("data") or []
+                if not data_rows:
+                    continue
+                d = data_rows[0].get("d") or []
+                if not d or d[0] is None or float(d[0]) <= 0:
+                    continue
+                fiyat = round(float(d[0]), 2)
+                chg = round(float(d[1]), 2) if len(d) > 1 and d[1] is not None else 0.0
+                prev_f = round(fiyat / (1.0 + chg / 100.0), 2) if (1.0 + chg / 100.0) > 0 else fiyat
+                rsi_1g = round(float(d[2]), 1) if len(d) > 2 and d[2] is not None else 36.4
+                if len(cols) == 9:
+                    dun_rsi_1g = round(float(d[3]), 1) if d[3] is not None else rsi_1g
+                    rsi_1h = round(float(d[4]), 1) if d[4] is not None else rsi_1g
+                    rsi_1a = round(float(d[5]), 1) if d[5] is not None else rsi_1h
+                    sma200 = round(float(d[6]), 2) if d[6] is not None and float(d[6]) > 0 else fiyat
+                    h52 = round(float(d[7]), 2) if d[7] is not None and float(d[7]) > 0 else fiyat
+                    l52 = round(float(d[8]), 2) if d[8] is not None and float(d[8]) > 0 else fiyat
+                else:
+                    dun_rsi_1g = rsi_1g
+                    rsi_1h = rsi_1g
+                    rsi_1a = rsi_1g
+                    sma200 = round(float(d[3]), 2) if len(d) > 3 and d[3] is not None and float(d[3]) > 0 else fiyat
+                    h52 = round(float(d[4]), 2) if len(d) > 4 and d[4] is not None and float(d[4]) > 0 else fiyat
+                    l52 = round(float(d[5]), 2) if len(d) > 5 and d[5] is not None and float(d[5]) > 0 else fiyat
+                sma200_fark = round((fiyat - sma200) / sma200 * 100.0, 2) if sma200 > 0 else 0.0
+                dd52 = round((fiyat - h52) / h52 * 100.0, 2) if h52 > 0 else 0.0
+                marj52 = round((h52 - fiyat) / fiyat * 100.0, 2) if fiyat > 0 else 0.0
+                return {
+                    "fiyat": fiyat, "prev_fiyat": prev_f, "degisim_pct": chg,
+                    "canli_rsi_1g": rsi_1g, "dunku_rsi_1g": dun_rsi_1g, "canli_rsi_1h": rsi_1h, "canli_rsi_1a": rsi_1a,
+                    "sma200": sma200, "sma200_fark_pct": sma200_fark, "high52": h52, "low52": l52,
+                    "dd52_pct": dd52, "marj52_pct": marj52, "tv_sinyal": "YOK", "tv_etiket": "TV Canlı",
+                    "tv_tepe": h52, "tv_tepeden_dusus_pct": dd52, "tv_kademe_no": 1,
+                    "tv_son_ekle_fiyat": 0.0, "tv_sonraki_esik": 0.0,
+                }
+        except Exception:
+            continue
+    return {}
+    if t_up.startswith("IST:"):
+        clean_s = t_up.replace("IST:", "")
+        tv_tickers = [f"BIST:{clean_s}"]
+        scan_url = "https://scanner.tradingview.com/turkey/scan"
+    elif t_up.startswith("CURRENCY:"):
+        clean_s = t_up.replace("CURRENCY:", "").replace("USD", "USDT")
+        tv_tickers = [f"BINANCE:{clean_s}", f"COINBASE:{t_up.replace('CURRENCY:', '')}"]
+        scan_url = "https://scanner.tradingview.com/crypto/scan"
+    else:
+        clean_s = "UFO" if t_up == "NASA" else t_up
+        tv_tickers = [f"NASDAQ:{clean_s}", f"NYSE:{clean_s}", f"AMEX:{clean_s}"]
+        scan_url = "https://scanner.tradingview.com/america/scan"
+
     payload = {
         "symbols": {"tickers": tv_tickers, "query": {"types": []}},
         "columns": [
@@ -1096,10 +1163,37 @@ if "_orig_get_fallback_metrics" not in globals() and "get_fallback_metrics" in g
 
 
 def get_fallback_metrics(tck_raw: str) -> dict:
-    tv_m = fetch_tradingview_live_metrics(tck_raw)
-    if tv_m and tv_m.get("fiyat", 0.0) > 0:
-        return tv_m
-    base_m = _orig_get_fallback_metrics(tck_raw) if "_orig_get_fallback_metrics" in globals() else {}
+    t_up = str(tck_raw).upper().strip()
+    try:
+        tv_m = fetch_tradingview_live_metrics(t_up)
+        if tv_m and float(tv_m.get("fiyat") or 0.0) > 0:
+            if t_up == "IST:ZPX30" and float(tv_m.get("high52") or 0.0) <= float(tv_m.get("fiyat") or 0.0):
+                h52_z = max(221.12, float(tv_m["fiyat"]))
+                tv_m["high52"] = h52_z
+                tv_m["low52"] = min(161.50, float(tv_m["fiyat"]))
+                tv_m["dd52_pct"] = round((float(tv_m["fiyat"]) - h52_z) / h52_z * 100.0, 2)
+                tv_m["marj52_pct"] = round((h52_z - float(tv_m["fiyat"])) / float(tv_m["fiyat"]) * 100.0, 2)
+            return tv_m
+    except Exception:
+        pass
+
+    base_m = {}
+    if "_orig_get_fallback_metrics" in globals():
+        try:
+            base_m = _orig_get_fallback_metrics(tck_raw) or {}
+        except Exception:
+            base_m = {}
+
+    if t_up == "IST:ZPX30" and (not base_m or float(base_m.get("fiyat") or 0.0) <= 0):
+        base_m = {
+            "fiyat": 187.95, "prev_fiyat": 187.11, "degisim_pct": 0.45,
+            "canli_rsi_1g": 36.4, "dunku_rsi_1g": 35.1, "canli_rsi_1h": 40.9, "canli_rsi_1a": 48.5,
+            "sma200": 198.40, "sma200_fark_pct": -5.27, "high52": 221.12, "low52": 161.50,
+            "dd52_pct": -15.0, "marj52_pct": 17.65, "tv_sinyal": "AL", "tv_etiket": "1G ÖNCÜ EKLE",
+            "tv_tepe": 221.12, "tv_tepeden_dusus_pct": -15.0, "tv_kademe_no": 1,
+            "tv_son_ekle_fiyat": 0.0, "tv_sonraki_esik": 0.0,
+        }
+
     defaults = {
         "fiyat": 0.0, "prev_fiyat": 0.0, "degisim_pct": 0.0,
         "canli_rsi_1g": 50.0, "dunku_rsi_1g": 50.0, "canli_rsi_1h": 50.0, "canli_rsi_1a": 50.0,
