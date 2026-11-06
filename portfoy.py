@@ -309,33 +309,7 @@ def analyze_price_history(df_hist) -> dict:
         "marj52_pct": marj52_pct,
     }
 
-# === BEKAPRSI_TV_ANALYZE_WRAP_V3 ===
-_WEEKLY_BAR_CACHE = globals().get("_WEEKLY_BAR_CACHE", {})
-_orig_analyze_price_history_v3 = analyze_price_history
-def analyze_price_history(s_close, *args, **kwargs):
-    res = _orig_analyze_price_history_v3(s_close, *args, **kwargs)
-    try:
-        s_clean = s_close.dropna()
-        s_w = s_clean.resample("W-FRI").last().dropna()
-        if len(s_w) >= 2:
-            prev_w = float(s_w.iloc[-2])
-            curr_w = float(s_w.iloc[-1])
-            chg_1h = round(((curr_w - prev_w) / prev_w) * 100.0, 2) if prev_w > 0 else 0.0
-            tetik_1h = round(prev_w * 1.004, 2)
-        else:
-            prev_w = float(s_clean.iloc[-1]) if len(s_clean) > 0 else 0.0
-            chg_1h = 0.0
-            tetik_1h = round(prev_w * 1.004, 2)
-        if isinstance(res, dict):
-            res["chg_1h_pct"] = chg_1h
-            res["prev_close_1h"] = prev_w
-            res["tetik_1h"] = tetik_1h
-            p_key = round(float(res.get("price", res.get("canli_fiyat", curr_w))), 2)
-            _WEEKLY_BAR_CACHE[p_key] = (chg_1h, prev_w, tetik_1h)
-    except Exception:
-        pass
-    return res
-# === END_BEKAPRSI_TV_ANALYZE_WRAP_V3 ===
+
 
 
 
@@ -453,125 +427,7 @@ def evaluate_portfolio_decision(row_dict: dict) -> tuple:
 
     return esik_25, guncel_deger, fren, kademe_u, alinacak_v, karar
 
-# === BEKAPRSI_TV_EVAL_WRAP_V3 ===
-_WEEKLY_BAR_CACHE = globals().get("_WEEKLY_BAR_CACHE", {})
-_orig_evaluate_portfolio_decision_v3 = evaluate_portfolio_decision
-def evaluate_portfolio_decision(*args, **kwargs):
-    dec = _orig_evaluate_portfolio_decision_v3(*args, **kwargs)
-    try:
-        metrics = {}
-        for a in list(args) + list(kwargs.values()):
-            if isinstance(a, dict):
-                metrics.update(a)
-        if isinstance(dec, dict):
-            metrics.update(dec)
 
-        price_val = float(metrics.get("price") or metrics.get("canli_fiyat") or 0.0)
-        rsi_1g_val = metrics.get("rsi_1g") if metrics.get("rsi_1g") is not None else metrics.get("canli_rsi_1g")
-        prev_rsi_1g_val = metrics.get("prev_rsi_1g") if metrics.get("prev_rsi_1g") is not None else metrics.get("dun_rsi_1g")
-        rsi_1h_val = metrics.get("rsi_1h") if metrics.get("rsi_1h") is not None else metrics.get("canli_rsi_1h")
-        prev_rsi_1h_val = metrics.get("prev_rsi_1h") if metrics.get("prev_rsi_1h") is not None else metrics.get("gecen_rsi_1h")
-        dd52_val = metrics.get("dd52_pct") if metrics.get("dd52_pct") is not None else metrics.get("fark_52h")
-        chg_1g_val = float(metrics.get("chg_pct") or metrics.get("gunluk_degisim") or 0.0)
-
-        chg_1h = metrics.get("chg_1h_pct")
-        tetik_1h = metrics.get("tetik_1h")
-        if chg_1h is None and price_val > 0:
-            cached = _WEEKLY_BAR_CACHE.get(round(price_val, 2))
-            if cached:
-                chg_1h, _, tetik_1h = cached
-        if chg_1h is None:
-            chg_1h = -5.0
-        if not tetik_1h and price_val > 0:
-            tetik_1h = round(price_val * 1.004, 2)
-
-        r1g_f = float(rsi_1g_val) if rsi_1g_val is not None else 50.0
-        pr1g_f = float(prev_rsi_1g_val) if prev_rsi_1g_val is not None else r1g_f
-        r1h_f = float(rsi_1h_val) if rsi_1h_val is not None else 50.0
-        pr1h_f = float(prev_rsi_1h_val) if prev_rsi_1h_val is not None else r1h_f
-        dd_f = float(dd52_val) if dd52_val is not None else 0.0
-        c1h_f = float(chg_1h)
-
-        # TradingView BEKAPRSI Gerçek 'EKLE' Şartları:
-        # 1) Haftalık (1H) EKLE: Haftalık mum yeşil (c1h_f >= +0.40%) VE (Önceki hafta 1H RSI < 40 olup bu hafta yukarı dönüş/kesişim)
-        tv_1h_ekle = (c1h_f >= 0.40) and (pr1h_f < 40.0 and r1h_f > pr1h_f)
-        # 2) Günlük (1G) EKLE: 1. Fren üstünde (dd_f > -21.0%) VE Dün 1G RSI < 40 iken Bugün 1G RSI >= 40 yukarı kesişimi VE 1G yeşil (>= +0.40%)
-        tv_1g_ekle = (dd_f > -21.0) and (pr1g_f < 40.0 and r1g_f >= 40.0) and (chg_1g_val >= 0.40)
-
-        if isinstance(dec, dict):
-            for k, v in list(dec.items()):
-                if isinstance(v, str) and ("EKLE" in v or ("🟢" in v and ("1H ANA KALE" in v or "1G ÖNCÜ" in v))):
-                    kademe_tail = v.split("➔")[-1].strip() if "➔" in v else ""
-                    tail_str = f" [{kademe_tail}]" if kademe_tail else ""
-                    if "1H ANA KALE" in v and not tv_1h_ekle:
-                        dec[k] = f"🔻 🔵 1H ANA KALE DİPTE (1H={r1h_f:.1f} | 1H Mum:{c1h_f:+.1f}%) ➔ TV Haftalık Yeşil Onay Bekleniyor{tail_str}"
-                        for ck in ("action_code", "kod", "status", "durum", "signal_type", "karar_kodu", "kategori_kodu"):
-                            if ck in dec and str(dec[ck]).upper() in ("AL", "EKLE", "YESIL", "BUY", "GREEN", "1H_AL", "1G_AL"):
-                                dec[ck] = "DIP_BEKLE"
-                        for bk in ("is_buy", "yeşil_al", "al_sinyali", "green_buy"):
-                            if bk in dec and isinstance(dec[bk], bool):
-                                dec[bk] = False
-                    elif "1G ÖNCÜ" in v and not tv_1g_ekle:
-                        if dd_f <= -21.0:
-                            dec[k] = f"🔻 1G DİPTE [1. FREN: {dd_f:.1f}%] ➔ TV 1H Haftalık Onay & RSI>=40 Kesişimi Bekleniyor{tail_str}"
-                        else:
-                            dec[k] = f"🔻 1G ÖNCÜ DİPTE (1G RSI:{r1g_f:.1f} < 40) ➔ TV RSI>=40 Yukarı Kesişim Bekleniyor{tail_str}"
-                        for ck in ("action_code", "kod", "status", "durum", "signal_type", "karar_kodu", "kategori_kodu"):
-                            if ck in dec and str(dec[ck]).upper() in ("AL", "EKLE", "YESIL", "BUY", "GREEN", "1H_AL", "1G_AL"):
-                                dec[ck] = "DIP_BEKLE"
-                        for bk in ("is_buy", "yeşil_al", "al_sinyali", "green_buy"):
-                            if bk in dec and isinstance(dec[bk], bool):
-                                dec[bk] = False
-    except Exception:
-        pass
-    return dec
-
-def _tv_clean_card_line(line_str, r1g, pr1g, r1h, dd52, c1h):
-    if "EKLE" not in line_str:
-        return line_str
-    tv_1h_ok = (r1h < 40.0 and c1h >= 0.40)
-    tv_1g_ok = (dd52 > -21.0 and pr1g < 40.0 and r1g >= 40.0)
-    if "1H ANA KALE" in line_str and not tv_1h_ok:
-        tail = line_str.split("➔")[-1].split("<")[0].strip() if "➔" in line_str else ""
-        close_tags = "".join("<" + p for p in line_str.split("➔")[-1].split("<")[1:]) if ("➔" in line_str and "<" in line_str.split("➔")[-1]) else ""
-        return f"🔻 🔵 1H ANA KALE DİPTE (1H={r1h:.1f} | 1H Mum:{c1h:+.1f}%) ➔ TV Haftalık Yeşil Onay Bekleniyor [{tail}]{close_tags}"
-    if "1G ÖNCÜ" in line_str and not tv_1g_ok:
-        tail = line_str.split("➔")[-1].split("<")[0].strip() if "➔" in line_str else ""
-        close_tags = "".join("<" + p for p in line_str.split("➔")[-1].split("<")[1:]) if ("➔" in line_str and "<" in line_str.split("➔")[-1]) else ""
-        if dd52 <= -21.0:
-            return f"🔻 1G DİPTE [1. FREN: {dd52:.1f}%] ➔ TV 1H Haftalık Onay & RSI>=40 Kesişimi Bekleniyor [{tail}]{close_tags}"
-        return f"🔻 1G ÖNCÜ DİPTE (1G RSI:{r1g:.1f} < 40) ➔ TV RSI>=40 Yukarı Kesişim Bekleniyor [{tail}]{close_tags}"
-    return line_str
-
-if "st" in globals() and hasattr(st, "markdown") and not hasattr(st, "_orig_markdown_tv_v3"):
-    st._orig_markdown_tv_v3 = st.markdown
-    def _tv_sanitized_markdown(body, *args, **kwargs):
-        try:
-            if isinstance(body, str) and "EKLE" in body and "1G RSI:" in body:
-                s1 = body.split("1G RSI:")[1]
-                r1g = float(s1.split("(")[0].strip())
-                pr1g = float(s1.split("Dün:")[1].split(")")[0].strip())
-                r1h = float(s1.split("1H RSI:")[1].split("|")[0].strip())
-                dd52 = float(s1.split("52H:")[1].split("%")[0].strip())
-                c1h = -5.0
-                for p_k, p_v in _WEEKLY_BAR_CACHE.items():
-                    if f"{p_k:.2f}" in body or f"{p_k:,.2f}" in body:
-                        c1h = p_v[0]
-                        break
-                lines_out = []
-                for ln in body.splitlines():
-                    if "EKLE" in ln and ("1H ANA KALE" in ln or "1G ÖNCÜ" in ln):
-                        if "🟢" in ln:
-                            prefix = ln.split("🟢")[0]
-                            rest = "🟢" + ln.split("🟢", 1)[1]
-                            ln = prefix + _tv_clean_card_line(rest, r1g, pr1g, r1h, dd52, c1h)
-                    lines_out.append(ln)
-                body = chr(10).join(lines_out)
-        except Exception:
-            pass
-        return st._orig_markdown_tv_v3(body, *args, **kwargs)
-    st.markdown = _tv_sanitized_markdown
-# === END_BEKAPRSI_TV_EVAL_WRAP_V3 ===
 
 
 
@@ -1483,33 +1339,38 @@ def analyze_price_history(df_hist: pd.DataFrame) -> dict:
         "tv_sonraki_esik": tv_info.get("tv_sonraki_esik", 0.0),
     }
 
-# === BEKAPRSI_TV_ANALYZE_WRAP_V3 ===
+# === BEKAPRSI_TV_ANALYZE_WRAP_V4 ===
 _WEEKLY_BAR_CACHE = globals().get("_WEEKLY_BAR_CACHE", {})
-_orig_analyze_price_history_v3 = analyze_price_history
-def analyze_price_history(s_close, *args, **kwargs):
-    res = _orig_analyze_price_history_v3(s_close, *args, **kwargs)
-    try:
-        s_clean = s_close.dropna()
-        s_w = s_clean.resample("W-FRI").last().dropna()
-        if len(s_w) >= 2:
-            prev_w = float(s_w.iloc[-2])
-            curr_w = float(s_w.iloc[-1])
-            chg_1h = round(((curr_w - prev_w) / prev_w) * 100.0, 2) if prev_w > 0 else 0.0
-            tetik_1h = round(prev_w * 1.004, 2)
-        else:
-            prev_w = float(s_clean.iloc[-1]) if len(s_clean) > 0 else 0.0
-            chg_1h = 0.0
-            tetik_1h = round(prev_w * 1.004, 2)
-        if isinstance(res, dict):
-            res["chg_1h_pct"] = chg_1h
-            res["prev_close_1h"] = prev_w
-            res["tetik_1h"] = tetik_1h
-            p_key = round(float(res.get("price", res.get("canli_fiyat", curr_w))), 2)
-            _WEEKLY_BAR_CACHE[p_key] = (chg_1h, prev_w, tetik_1h)
-    except Exception:
-        pass
-    return res
-# === END_BEKAPRSI_TV_ANALYZE_WRAP_V3 ===
+def _wrap_analyze_v4(_orig_fn=analyze_price_history):
+    def _inner(s_close, *args, **kwargs):
+        res = _orig_fn(s_close, *args, **kwargs)
+        try:
+            s_clean = s_close.dropna()
+            s_w = s_clean.resample("W-FRI").last().dropna()
+            if len(s_w) >= 2:
+                prev_w = float(s_w.iloc[-2])
+                curr_w = float(s_w.iloc[-1])
+                chg_1h = round(((curr_w - prev_w) / prev_w) * 100.0, 2) if prev_w > 0 else 0.0
+                tetik_1h = round(prev_w * 1.004, 2)
+            else:
+                prev_w = float(s_clean.iloc[-1]) if len(s_clean) > 0 else 0.0
+                chg_1h = 0.0
+                tetik_1h = round(prev_w * 1.004, 2)
+            if isinstance(res, dict):
+                res["chg_1h_pct"] = chg_1h
+                res["prev_close_1h"] = prev_w
+                res["tetik_1h"] = tetik_1h
+                p_key = round(float(res.get("price", res.get("canli_fiyat", curr_w))), 2)
+                _WEEKLY_BAR_CACHE[p_key] = (chg_1h, prev_w, tetik_1h)
+        except Exception:
+            pass
+        return res
+    return _inner
+analyze_price_history = _wrap_analyze_v4()
+# === END_BEKAPRSI_TV_ANALYZE_WRAP_V4 ===
+
+
+
 
 
 
@@ -1579,125 +1440,51 @@ def evaluate_portfolio_decision(row: dict) -> tuple:
     karar = str(karar).replace("🟢 🟢 ", "🟢 ").replace("🔻 🟢 ", "🔻 ")
     return esik, deger, fren, kad_u, lot_v, karar
 
-# === BEKAPRSI_TV_EVAL_WRAP_V3 ===
+# === BEKAPRSI_TV_EVAL_WRAP_V4 ===
 _WEEKLY_BAR_CACHE = globals().get("_WEEKLY_BAR_CACHE", {})
-_orig_evaluate_portfolio_decision_v3 = evaluate_portfolio_decision
-def evaluate_portfolio_decision(*args, **kwargs):
-    dec = _orig_evaluate_portfolio_decision_v3(*args, **kwargs)
-    try:
-        metrics = {}
-        for a in list(args) + list(kwargs.values()):
-            if isinstance(a, dict):
-                metrics.update(a)
-        if isinstance(dec, dict):
-            metrics.update(dec)
-
-        price_val = float(metrics.get("price") or metrics.get("canli_fiyat") or 0.0)
-        rsi_1g_val = metrics.get("rsi_1g") if metrics.get("rsi_1g") is not None else metrics.get("canli_rsi_1g")
-        prev_rsi_1g_val = metrics.get("prev_rsi_1g") if metrics.get("prev_rsi_1g") is not None else metrics.get("dun_rsi_1g")
-        rsi_1h_val = metrics.get("rsi_1h") if metrics.get("rsi_1h") is not None else metrics.get("canli_rsi_1h")
-        prev_rsi_1h_val = metrics.get("prev_rsi_1h") if metrics.get("prev_rsi_1h") is not None else metrics.get("gecen_rsi_1h")
-        dd52_val = metrics.get("dd52_pct") if metrics.get("dd52_pct") is not None else metrics.get("fark_52h")
-        chg_1g_val = float(metrics.get("chg_pct") or metrics.get("gunluk_degisim") or 0.0)
-
-        chg_1h = metrics.get("chg_1h_pct")
-        tetik_1h = metrics.get("tetik_1h")
-        if chg_1h is None and price_val > 0:
-            cached = _WEEKLY_BAR_CACHE.get(round(price_val, 2))
-            if cached:
-                chg_1h, _, tetik_1h = cached
-        if chg_1h is None:
-            chg_1h = -5.0
-        if not tetik_1h and price_val > 0:
-            tetik_1h = round(price_val * 1.004, 2)
-
-        r1g_f = float(rsi_1g_val) if rsi_1g_val is not None else 50.0
-        pr1g_f = float(prev_rsi_1g_val) if prev_rsi_1g_val is not None else r1g_f
-        r1h_f = float(rsi_1h_val) if rsi_1h_val is not None else 50.0
-        pr1h_f = float(prev_rsi_1h_val) if prev_rsi_1h_val is not None else r1h_f
-        dd_f = float(dd52_val) if dd52_val is not None else 0.0
-        c1h_f = float(chg_1h)
-
-        # TradingView BEKAPRSI Gerçek 'EKLE' Şartları:
-        # 1) Haftalık (1H) EKLE: Haftalık mum yeşil (c1h_f >= +0.40%) VE (Önceki hafta 1H RSI < 40 olup bu hafta yukarı dönüş/kesişim)
-        tv_1h_ekle = (c1h_f >= 0.40) and (pr1h_f < 40.0 and r1h_f > pr1h_f)
-        # 2) Günlük (1G) EKLE: 1. Fren üstünde (dd_f > -21.0%) VE Dün 1G RSI < 40 iken Bugün 1G RSI >= 40 yukarı kesişimi VE 1G yeşil (>= +0.40%)
-        tv_1g_ekle = (dd_f > -21.0) and (pr1g_f < 40.0 and r1g_f >= 40.0) and (chg_1g_val >= 0.40)
-
-        if isinstance(dec, dict):
-            for k, v in list(dec.items()):
-                if isinstance(v, str) and ("EKLE" in v or ("🟢" in v and ("1H ANA KALE" in v or "1G ÖNCÜ" in v))):
-                    kademe_tail = v.split("➔")[-1].strip() if "➔" in v else ""
-                    tail_str = f" [{kademe_tail}]" if kademe_tail else ""
-                    if "1H ANA KALE" in v and not tv_1h_ekle:
-                        dec[k] = f"🔻 🔵 1H ANA KALE DİPTE (1H={r1h_f:.1f} | 1H Mum:{c1h_f:+.1f}%) ➔ TV Haftalık Yeşil Onay Bekleniyor{tail_str}"
-                        for ck in ("action_code", "kod", "status", "durum", "signal_type", "karar_kodu", "kategori_kodu"):
-                            if ck in dec and str(dec[ck]).upper() in ("AL", "EKLE", "YESIL", "BUY", "GREEN", "1H_AL", "1G_AL"):
-                                dec[ck] = "DIP_BEKLE"
-                        for bk in ("is_buy", "yeşil_al", "al_sinyali", "green_buy"):
-                            if bk in dec and isinstance(dec[bk], bool):
-                                dec[bk] = False
-                    elif "1G ÖNCÜ" in v and not tv_1g_ekle:
-                        if dd_f <= -21.0:
-                            dec[k] = f"🔻 1G DİPTE [1. FREN: {dd_f:.1f}%] ➔ TV 1H Haftalık Onay & RSI>=40 Kesişimi Bekleniyor{tail_str}"
-                        else:
-                            dec[k] = f"🔻 1G ÖNCÜ DİPTE (1G RSI:{r1g_f:.1f} < 40) ➔ TV RSI>=40 Yukarı Kesişim Bekleniyor{tail_str}"
-                        for ck in ("action_code", "kod", "status", "durum", "signal_type", "karar_kodu", "kategori_kodu"):
-                            if ck in dec and str(dec[ck]).upper() in ("AL", "EKLE", "YESIL", "BUY", "GREEN", "1H_AL", "1G_AL"):
-                                dec[ck] = "DIP_BEKLE"
-                        for bk in ("is_buy", "yeşil_al", "al_sinyali", "green_buy"):
-                            if bk in dec and isinstance(dec[bk], bool):
-                                dec[bk] = False
-    except Exception:
-        pass
-    return dec
-
-def _tv_clean_card_line(line_str, r1g, pr1g, r1h, dd52, c1h):
-    if "EKLE" not in line_str:
-        return line_str
-    tv_1h_ok = (r1h < 40.0 and c1h >= 0.40)
-    tv_1g_ok = (dd52 > -21.0 and pr1g < 40.0 and r1g >= 40.0)
-    if "1H ANA KALE" in line_str and not tv_1h_ok:
-        tail = line_str.split("➔")[-1].split("<")[0].strip() if "➔" in line_str else ""
-        close_tags = "".join("<" + p for p in line_str.split("➔")[-1].split("<")[1:]) if ("➔" in line_str and "<" in line_str.split("➔")[-1]) else ""
-        return f"🔻 🔵 1H ANA KALE DİPTE (1H={r1h:.1f} | 1H Mum:{c1h:+.1f}%) ➔ TV Haftalık Yeşil Onay Bekleniyor [{tail}]{close_tags}"
-    if "1G ÖNCÜ" in line_str and not tv_1g_ok:
-        tail = line_str.split("➔")[-1].split("<")[0].strip() if "➔" in line_str else ""
-        close_tags = "".join("<" + p for p in line_str.split("➔")[-1].split("<")[1:]) if ("➔" in line_str and "<" in line_str.split("➔")[-1]) else ""
-        if dd52 <= -21.0:
-            return f"🔻 1G DİPTE [1. FREN: {dd52:.1f}%] ➔ TV 1H Haftalık Onay & RSI>=40 Kesişimi Bekleniyor [{tail}]{close_tags}"
-        return f"🔻 1G ÖNCÜ DİPTE (1G RSI:{r1g:.1f} < 40) ➔ TV RSI>=40 Yukarı Kesişim Bekleniyor [{tail}]{close_tags}"
-    return line_str
-
-if "st" in globals() and hasattr(st, "markdown") and not hasattr(st, "_orig_markdown_tv_v3"):
-    st._orig_markdown_tv_v3 = st.markdown
-    def _tv_sanitized_markdown(body, *args, **kwargs):
+def _wrap_eval_v4(_orig_fn=evaluate_portfolio_decision):
+    def _inner(row_d, *args, **kwargs):
+        res = _orig_fn(row_d, *args, **kwargs)
         try:
-            if isinstance(body, str) and "EKLE" in body and "1G RSI:" in body:
-                s1 = body.split("1G RSI:")[1]
-                r1g = float(s1.split("(")[0].strip())
-                pr1g = float(s1.split("Dün:")[1].split(")")[0].strip())
-                r1h = float(s1.split("1H RSI:")[1].split("|")[0].strip())
-                dd52 = float(s1.split("52H:")[1].split("%")[0].strip())
-                c1h = -5.0
-                for p_k, p_v in _WEEKLY_BAR_CACHE.items():
-                    if f"{p_k:.2f}" in body or f"{p_k:,.2f}" in body:
-                        c1h = p_v[0]
-                        break
-                lines_out = []
-                for ln in body.splitlines():
-                    if "EKLE" in ln and ("1H ANA KALE" in ln or "1G ÖNCÜ" in ln):
-                        if "🟢" in ln:
-                            prefix = ln.split("🟢")[0]
-                            rest = "🟢" + ln.split("🟢", 1)[1]
-                            ln = prefix + _tv_clean_card_line(rest, r1g, pr1g, r1h, dd52, c1h)
-                    lines_out.append(ln)
-                body = chr(10).join(lines_out)
+            if isinstance(res, tuple) and len(res) == 6:
+                esik, deger, fren, kad_u, lot_v, karar = res
+                if isinstance(karar, str) and "EKLE" in karar:
+                    d = row_d if isinstance(row_d, dict) else {}
+                    p_val = float(d.get("price") or d.get("canli_fiyat") or 0.0)
+                    r1g = float(d.get("rsi_1g") or d.get("canli_rsi_1g") or 50.0)
+                    pr1g = float(d.get("prev_rsi_1g") or d.get("dun_rsi_1g") or r1g)
+                    r1h = float(d.get("rsi_1h") or d.get("canli_rsi_1h") or 50.0)
+                    dd52 = float(d.get("dd52_pct") or d.get("fark_52h") or 0.0)
+                    c1g = float(d.get("chg_pct") or d.get("gunluk_degisim") or 0.0)
+                    c1h = d.get("chg_1h_pct")
+                    if c1h is None and p_val > 0:
+                        c1h = _WEEKLY_BAR_CACHE.get(round(p_val, 2), (-5.0,))[0]
+                    c1h_f = float(c1h) if c1h is not None else -5.0
+
+                    # TradingView BEKAPRSI Gerçek 'EKLE' Şartları:
+                    # 1) 1H ANA KALE EKLE: Haftalık mumun kendisi yeşil (c1h_f >= +0.40%) olmalı
+                    tv_1h_ok = (r1h < 40.0 and c1h_f >= 0.40)
+                    # 2) 1G ÖNCÜ EKLE: 1. Fren üstünde (dd52 > -21.0%) VE Dün RSI<40 iken Bugün RSI>=40 yukarı kesişimi olmalı
+                    tv_1g_ok = (dd52 > -21.0 and pr1g < 40.0 and r1g >= 40.0 and c1g >= 0.40)
+
+                    tail = karar.split("➔")[-1].strip() if "➔" in karar else f"+{kad_u:.0f}$ ({lot_v} Adet)"
+                    if "1H ANA KALE" in karar and not tv_1h_ok:
+                        karar = f"🔻 🔵 1H ANA KALE DİPTE (1H={r1h:.1f} | 1H Mum:{c1h_f:+.1f}%) ➔ Haftalık Yeşil Onay Bekleniyor ({tail})"
+                    elif "1G ÖNCÜ" in karar and not tv_1g_ok:
+                        if dd52 <= -21.0:
+                            karar = f"🔻 1G DİPTE [1. FREN: {dd52:.1f}%] ➔ 1H Haftalık Onay Bekleniyor ({tail})"
+                        else:
+                            karar = f"🔻 1G ÖNCÜ DİPTE (1G RSI:{r1g:.1f} < 40) ➔ TV RSI>=40 Kesişimi Bekleniyor ({tail})"
+                    return (esik, deger, fren, kad_u, lot_v, karar)
         except Exception:
             pass
-        return st._orig_markdown_tv_v3(body, *args, **kwargs)
-    st.markdown = _tv_sanitized_markdown
-# === END_BEKAPRSI_TV_EVAL_WRAP_V3 ===
+        return res
+    return _inner
+evaluate_portfolio_decision = _wrap_eval_v4()
+# === END_BEKAPRSI_TV_EVAL_WRAP_V4 ===
+
+
+
 
 # === MAC MINI TAMIR YAMASI BITIS ===
 
