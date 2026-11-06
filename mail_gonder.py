@@ -34,7 +34,7 @@ def run_cloud_newsletter():
     series_map = {}
     def _w(sym):
         return sym, pf.fetch_direct_series(sym, "2y")
-    with ThreadPoolExecutor(max_workers=12) as ex:
+    with ThreadPoolExecutor(max_workers=28) as ex:
         for sym, ser in ex.map(_w, yf_tickers):
             if ser is not None and len(ser) >= 15:
                 series_map[sym] = ser
