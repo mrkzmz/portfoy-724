@@ -87,3 +87,94 @@ def run_cloud_newsletter():
 
 if __name__ == "__main__":
     run_cloud_newsletter()
+
+
+# === BEKAPRSI_TV_1H_SYNC_V1 ===
+_WEEKLY_BAR_CACHE = {}
+
+if "analyze_price_history" in globals() and "_orig_analyze_price_history_tv" not in globals():
+    _orig_analyze_price_history_tv = analyze_price_history
+
+    def analyze_price_history(s_close, *args, **kwargs):
+        res = _orig_analyze_price_history_tv(s_close, *args, **kwargs)
+        try:
+            s_clean = s_close.dropna()
+            s_w = s_clean.resample("W-FRI").last().dropna()
+            if len(s_w) >= 2:
+                prev_w = float(s_w.iloc[-2])
+                curr_w = float(s_w.iloc[-1])
+                chg_1h = round(((curr_w - prev_w) / prev_w) * 100.0, 2) if prev_w > 0 else 0.0
+                tetik_1h = round(prev_w * 1.004, 2)
+            else:
+                prev_w = float(s_clean.iloc[-1]) if len(s_clean) > 0 else 0.0
+                chg_1h = 0.0
+                tetik_1h = round(prev_w * 1.004, 2)
+            if isinstance(res, dict):
+                res["chg_1h_pct"] = chg_1h
+                res["prev_close_1h"] = prev_w
+                res["tetik_1h"] = tetik_1h
+                p_key = round(float(res.get("price", res.get("canli_fiyat", curr_w))), 2)
+                _WEEKLY_BAR_CACHE[p_key] = (chg_1h, prev_w, tetik_1h)
+        except Exception:
+            pass
+        return res
+
+if "evaluate_portfolio_decision" in globals() and "_orig_evaluate_portfolio_decision_tv" not in globals():
+    _orig_evaluate_portfolio_decision_tv = evaluate_portfolio_decision
+
+    def evaluate_portfolio_decision(*args, **kwargs):
+        dec = _orig_evaluate_portfolio_decision_tv(*args, **kwargs)
+        try:
+            # Girdi parametrelerinden metrikleri yakala
+            metrics = {}
+            for a in list(args) + list(kwargs.values()):
+                if isinstance(a, dict):
+                    metrics.update(a)
+            if isinstance(dec, dict):
+                metrics.update(dec)
+
+            price_val = float(metrics.get("price") or metrics.get("canli_fiyat") or 0.0)
+            rsi_1h_val = metrics.get("rsi_1h") if metrics.get("rsi_1h") is not None else metrics.get("canli_rsi_1h")
+            dd52_val = metrics.get("dd52_pct") if metrics.get("dd52_pct") is not None else metrics.get("fark_52h")
+
+            chg_1h = metrics.get("chg_1h_pct")
+            tetik_1h = metrics.get("tetik_1h")
+            if chg_1h is None and price_val > 0:
+                cached = _WEEKLY_BAR_CACHE.get(round(price_val, 2))
+                if cached:
+                    chg_1h, _, tetik_1h = cached
+            if chg_1h is None:
+                chg_1h = 0.0
+            if not tetik_1h and price_val > 0:
+                tetik_1h = round(price_val * 1.004, 2)
+
+            if isinstance(dec, dict):
+                for k, v in list(dec.items()):
+                    if isinstance(v, str):
+                        # KURAL 1: 1H ANA KALE EKLE/AL sinyali için HAFTALIK mumun yeşil (>= +%0.40) olması şarttır
+                        if "1H ANA KALE" in v and ("EKLE" in v or "🟢" in v) and float(chg_1h) < 0.40:
+                            r1h_str = f"{float(rsi_1h_val):.1f}" if rsi_1h_val is not None else "<40"
+                            dec[k] = f"🔻 🔵 1H ANA KALE DİPTE (1H={r1h_str} | 1H Mum: {float(chg_1h):+.1f}%) ➔ Haftalık Yeşil Onay: >={float(tetik_1h):.2f}$"
+                            for ck in ("action_code", "kod", "status", "durum", "signal_type"):
+                                if ck in dec and dec[ck] in ("AL", "EKLE", "YESIL", "BUY"):
+                                    dec[ck] = "DIP_BEKLE"
+                            for bk in ("is_buy", "yeşil_al", "al_sinyali"):
+                                if bk in dec and isinstance(dec[bk], bool):
+                                    dec[bk] = False
+
+                        # KURAL 2: 1. Fren (-%21..-%35) bölgesinde 1H RSI < 40 olmadan 1G ÖNCÜ EKLE yanamaz
+                        elif "1G ÖNCÜ" in v and ("EKLE" in v or "🟢" in v) and dd52_val is not None:
+                            dd_f = float(dd52_val)
+                            r1h_f = float(rsi_1h_val) if rsi_1h_val is not None else 50.0
+                            if -35.0 < dd_f <= -21.0 and r1h_f >= 40.0:
+                                dec[k] = f"⏳ 1. FREN AKTİF ({dd_f:.1f}%) ➔ 1H Haftalık Onay (1H RSI < 40, Şu an: {r1h_f:.1f}) Bekleniyor"
+                                for ck in ("action_code", "kod", "status", "durum", "signal_type"):
+                                    if ck in dec and dec[ck] in ("AL", "EKLE", "YESIL", "BUY"):
+                                        dec[ck] = "DIP_BEKLE"
+                                for bk in ("is_buy", "yeşil_al", "al_sinyali"):
+                                    if bk in dec and isinstance(dec[bk], bool):
+                                        dec[bk] = False
+        except Exception:
+            pass
+        return dec
+# === END_BEKAPRSI_TV_1H_SYNC_V1 ===
