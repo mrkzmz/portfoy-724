@@ -862,7 +862,7 @@ def _push_file_to_github(local_path: str, remote_name: str, token: str, repo_ful
     sha_val = None
     try:
         req_get = urllib.request.Request(api_url + "?ref=main", headers=headers, method="GET")
-        with urllib.request.urlopen(req_get, context=ctx, timeout=10) as resp:
+        with urllib.request.urlopen(req_get, context=ctx, timeout=4.5) as resp:
             data_get = json.loads(resp.read().decode("utf-8"))
             sha_val = data_get.get("sha")
     except Exception:
@@ -880,7 +880,7 @@ def _push_file_to_github(local_path: str, remote_name: str, token: str, repo_ful
     headers_put = dict(headers)
     headers_put["Content-Type"] = "application/json"
     req_put = urllib.request.Request(api_url, data=body_bytes, headers=headers_put, method="PUT")
-    with urllib.request.urlopen(req_put, context=ctx, timeout=15) as resp_put:
+    with urllib.request.urlopen(req_put, context=ctx, timeout=4.5) as resp_put:
         return resp_put.status in (200, 201), resp_put.status
 
 
@@ -1601,7 +1601,7 @@ def main():
     inject_clean_css()
     df_db, pool_usd = load_portfolio_db()
 
-    @st.cache_data(ttl=180, show_spinner="83 varlığın tamamı (ABD + Kripto + BIST) canlı taranıyor...")
+    @st.cache_data(ttl=300, show_spinner="83 varlığın tamamı (ABD + Kripto + BIST) canlı taranıyor...")
     def fetch_live_snapshot(df_sub: pd.DataFrame) -> pd.DataFrame:
         yf_tickers = df_sub["yf_ticker"].tolist()
         series_map = {}
@@ -1610,7 +1610,7 @@ def main():
             return sym, fetch_direct_series(sym, "2y")
 
         try:
-            with ThreadPoolExecutor(max_workers=14) as ex:
+            with ThreadPoolExecutor(max_workers=28) as ex:
                 for sym, ser in ex.map(_worker, yf_tickers):
                     if ser is not None and len(ser) >= 15:
                         series_map[sym] = ser
@@ -1996,7 +1996,7 @@ def main():
         ]
         bt_ticker = st.selectbox("20 Yıllık Haftalık RSI Analizi Yapılacak Varlığı Seç (ABD, BIST .IS veya Kripto):", bt_options, index=0)
 
-        @st.cache_data(ttl=1800, show_spinner="20 yıllık tarihsel günlük ve haftalık döngüler hesaplanıyor...")
+        @st.cache_data(ttl=300, show_spinner="20 yıllık tarihsel günlük ve haftalık döngüler hesaplanıyor...")
         def cached_20y_backtest(tck_sym: str) -> dict:
             s_close = fetch_direct_series(tck_sym, "10y")
             if len(s_close) < 200 and yf is not None:
