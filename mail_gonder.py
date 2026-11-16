@@ -1,3 +1,41 @@
+# === BEKAPRSI_MAIL_TOP_V7 ===
+try:
+    import os as _os_m7, sys as _sys_m7
+    _app_d7 = _os_m7.path.expanduser("~/PortfoyMerkezi")
+    if _app_d7 not in _sys_m7.path:
+        _sys_m7.path.insert(0, _app_d7)
+    if not _os_m7.environ.get("PORTFOY_SKIP_AUTOPULL"):
+        import buluttan_cek as _bc_m7
+        _bc_m7.pull_and_merge_cloud_db(force=False)
+except Exception:
+    pass
+
+try:
+    import email.mime.text as _emt_7
+    from datetime import datetime as _dt_m7, timezone as _tz_m7, timedelta as _td_m7
+    if not hasattr(_emt_7, "_orig_mimetext_v7"):
+        _emt_7._orig_mimetext_v7 = _emt_7.MIMEText
+        def _bist_safe_mimetext_v7(_text, _subtype="plain", *a, **kw):
+            try:
+                _now_t = _dt_m7.now(_tz_m7(_td_m7(hours=3)))
+                _bist_on = (_now_t.weekday() < 5) and (570 <= (_now_t.hour * 60 + _now_t.minute) < 1080)
+                if (not _bist_on) and isinstance(_text, str) and ("3. BÖLÜM: BIST" in _text):
+                    while "3. BÖLÜM: BIST" in _text:
+                        _p = _text.find("3. BÖLÜM: BIST")
+                        _d = _text.rfind("<div", 0, _p)
+                        _t = _text.find("</table>", _p)
+                        if _d != -1 and _t != -1:
+                            _text = _text[:_d] + _text[_t + 8:]
+                        else:
+                            break
+            except Exception:
+                pass
+            return _emt_7._orig_mimetext_v7(_text, _subtype, *a, **kw)
+        _emt_7.MIMEText = _bist_safe_mimetext_v7
+except Exception:
+    pass
+# === END_BEKAPRSI_MAIL_TOP_V7 ===
+
 import warnings
 warnings.filterwarnings("ignore")
 # -*- coding: utf-8 -*-
@@ -11,17 +49,7 @@ from concurrent.futures import ThreadPoolExecutor
 os.environ["PORTFOY_CLI_IMPORT"] = "1"
 import portfoy as pf
 
-# === BEKAPRSI_MAIL_AUTOPULL_V6 ===
-try:
-    import os as _os_ap, subprocess as _sp_ap
-    _pull_py = _os_ap.path.expanduser("~/PortfoyMerkezi/buluttan_cek.py")
-    if _os_ap.path.exists(_pull_py) and not _os_ap.environ.get("PORTFOY_SKIP_AUTOPULL"):
-        _env_ap = dict(_os_ap.environ)
-        _env_ap["PORTFOY_SKIP_AUTOPULL"] = "1"
-        _sp_ap.run(["python3", _pull_py], timeout=20, stdout=_sp_ap.DEVNULL, stderr=_sp_ap.DEVNULL, env=_env_ap)
-except Exception:
-    pass
-# === END_BEKAPRSI_MAIL_AUTOPULL_V6 ===
+
 
 
 
