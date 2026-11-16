@@ -24,6 +24,9 @@ except Exception:
 # === END_BEKAPRSI_MAIL_AUTOPULL_V6 ===
 
 
+
+
+
 def should_dispatch_now() -> tuple:
     is_scheduled = (os.environ.get("GITHUB_EVENT_NAME") == "schedule") or ("--scheduled" in sys.argv)
     if not is_scheduled:
