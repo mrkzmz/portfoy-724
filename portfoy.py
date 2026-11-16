@@ -810,6 +810,63 @@ def build_bekaprsi_html_email(df_live: pd.DataFrame, pool_usd: float) -> tuple:
     subj = f"💼 BEKAPRSI Sinyal Bülteni ({tarih_str}) — {len(df_elimde_al)} Elimde Al | {len(df_elimde_sat)} Sat | {len(df_us_dip)} Hedef Dip"
     return subj, html_body
 
+# === BEKAPRSI_BIST_HIDE_V7 ===
+def _is_bist_window_tsi_v7():
+    from datetime import datetime as _dt_b, timezone as _tz_b, timedelta as _td_b
+    _now_tsi = _dt_b.now(_tz_b(_td_b(hours=3)))
+    if _now_tsi.weekday() >= 5:
+        return False
+    _mins = _now_tsi.hour * 60 + _now_tsi.minute
+    return 570 <= _mins < 1080
+
+def _strip_bist_html_v7(html_s):
+    if not isinstance(html_s, str):
+        return html_s
+    _marker = "3. BÖLÜM: BIST"
+    while _marker in html_s:
+        _mp = html_s.find(_marker)
+        _ds = html_s.rfind("<div", 0, _mp)
+        _te = html_s.find("</table>", _mp)
+        if _ds != -1 and _te != -1:
+            html_s = html_s[:_ds] + html_s[_te + 8:]
+        else:
+            break
+    return html_s
+
+def _filter_bist_df_v7(obj):
+    try:
+        if hasattr(obj, "columns") and hasattr(obj, "copy"):
+            df_c = obj.copy()
+            mask = [True] * len(df_c)
+            for idx_i, (_, r_i) in enumerate(df_c.iterrows()):
+                t_s = str(r_i.get("ticker", "")).upper()
+                y_s = str(r_i.get("yf_ticker", "")).upper()
+                k_s = str(r_i.get("kategori", "")).upper()
+                s_s = str(r_i.get("sektor", "")).upper()
+                if t_s.startswith("IST:") or t_s.startswith("BIST:") or "(BIST)" in t_s or y_s.endswith(".IS") or "BIST" in k_s or "BIST" in s_s:
+                    mask[idx_i] = False
+            return df_c[mask]
+    except Exception:
+        pass
+    return obj
+
+def _wrap_email_bist_v7(_orig_fn=build_bekaprsi_html_email):
+    def _inner(*args, **kwargs):
+        if _is_bist_window_tsi_v7():
+            return _orig_fn(*args, **kwargs)
+        new_args = tuple(_filter_bist_df_v7(a) for a in args)
+        new_kwargs = {k: _filter_bist_df_v7(v) for k, v in kwargs.items()}
+        out = _orig_fn(*new_args, **new_kwargs)
+        if isinstance(out, str):
+            return _strip_bist_html_v7(out)
+        if isinstance(out, tuple):
+            return tuple(_strip_bist_html_v7(x) if isinstance(x, str) else x for x in out)
+        return out
+    return _inner
+build_bekaprsi_html_email = _wrap_email_bist_v7()
+# === END_BEKAPRSI_BIST_HIDE_V7 ===
+
+
 
 def send_bekaprsi_email(df_live: pd.DataFrame, pool_usd: float, email_addr: str, app_pass: str) -> tuple:
     if not email_addr or not app_pass:
@@ -932,6 +989,26 @@ def sync_to_github_cloud(gh_token: str = "", repo_full: str = "mrkzmz/portfoy-72
         return False, f"❌ GitHub Eşitleme Hatası ({he.code}): Token yetkisini (repo) kontrol edin."
     except Exception as e:
         return False, f"❌ Bulut eşitleme hatası: {e}"
+
+# === BEKAPRSI_GH_SYNC_STAMP_V7 ===
+def _wrap_gh_sync_v7(_orig_fn=sync_to_github_cloud):
+    def _inner(*args, **kwargs):
+        try:
+            from datetime import datetime as _dt_s, timezone as _tz_s
+            import sqlite3 as _sq_s, os as _os_s
+            _db_p = _os_s.path.expanduser("~/PortfoyMerkezi/portfoy_hafiza.db")
+            if _os_s.path.exists(_db_p):
+                with _sq_s.connect(_db_p, timeout=10) as _cs:
+                    _ts_now = _dt_s.now(_tz_s.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+                    _cs.execute("INSERT OR REPLACE INTO settings (key, value) VALUES ('LAST_DB_UPDATE_UTC', ?)", (_ts_now,))
+                    _cs.commit()
+        except Exception:
+            pass
+        return _orig_fn(*args, **kwargs)
+    return _inner
+sync_to_github_cloud = _wrap_gh_sync_v7()
+# === END_BEKAPRSI_GH_SYNC_STAMP_V7 ===
+
 
 
 from datetime import datetime, timezone, timedelta
