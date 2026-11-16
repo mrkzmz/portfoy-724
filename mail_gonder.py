@@ -11,6 +11,19 @@ from concurrent.futures import ThreadPoolExecutor
 os.environ["PORTFOY_CLI_IMPORT"] = "1"
 import portfoy as pf
 
+# === BEKAPRSI_MAIL_AUTOPULL_V6 ===
+try:
+    import os as _os_ap, subprocess as _sp_ap
+    _pull_py = _os_ap.path.expanduser("~/PortfoyMerkezi/buluttan_cek.py")
+    if _os_ap.path.exists(_pull_py) and not _os_ap.environ.get("PORTFOY_SKIP_AUTOPULL"):
+        _env_ap = dict(_os_ap.environ)
+        _env_ap["PORTFOY_SKIP_AUTOPULL"] = "1"
+        _sp_ap.run(["python3", _pull_py], timeout=20, stdout=_sp_ap.DEVNULL, stderr=_sp_ap.DEVNULL, env=_env_ap)
+except Exception:
+    pass
+# === END_BEKAPRSI_MAIL_AUTOPULL_V6 ===
+
+
 def should_dispatch_now() -> tuple:
     is_scheduled = (os.environ.get("GITHUB_EVENT_NAME") == "schedule") or ("--scheduled" in sys.argv)
     if not is_scheduled:
